@@ -1,0 +1,30 @@
+{
+    "name": "query-vt-contours",
+    "description": "Queries vector tile for elevation",
+    "version": "0.0.1",
+    "licenses": [{ "type": "BSD" }],
+    "keywords": ["map", "vector tiles"],
+    "url": "https://github.com/mapbox/elevation-query.git",
+    "repository": {
+        "type": "git",
+        "url": "git://github.com/mapbox/elevation-query.git"
+    },
+    "author": {
+      "name": "MapBox",
+      "url": "http://mapbox.com/",
+      "email": "info@mapbox.com"
+    },
+    "main": "./index",
+    "dependencies:": {
+      "sphericalmercator": "1.0.x",
+      "mapnik": "https://github.com/mapnik/node-mapnik/tarball/query-v2"
+
+    },
+    "devDependencies": {
+      "mocha": "1.17.x"
+    },
+    "scripts": {
+      "pretest": "npm install mocha",
+      "test": "mocha"
+    }
+}
