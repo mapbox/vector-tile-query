@@ -15,9 +15,11 @@
       "email": "info@mapbox.com"
     },
     "main": "./index",
-    "dependencies:": {
+    "dependencies": {
       "sphericalmercator": "1.0.x",
-      "mapnik": "https://github.com/mapnik/node-mapnik/tarball/query-v2"
+      "mapnik": "https://github.com/mapnik/node-mapnik/tarball/query-v2",
+      "polyline": "0.0.x",
+      "zlib": "1.0.x"
 
     },
     "devDependencies": {
