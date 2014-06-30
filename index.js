@@ -20,58 +20,61 @@ function getElev(z,lonlat,callback) {
     var lat = lonlat[0];
     var xyz = sm.xyz([lon, lat, lon, lat], z);
     var tileName = ''+z+'/'+xyz.minX+'/'+xyz.minY;
-    var data = fs.readFileSync('tiles/'+tileName+'.vector.pbf');
-    var vtile = new mapnik.VectorTile(z,xyz.minX,xyz.minY);
-    vtile.setData(data);
-    vtile.parse();
+    fs.readFile('tiles/'+tileName+'.vector.pbf', function(err, data) {
+        if (err) throw err;
+        var vtile = new mapnik.VectorTile(z,xyz.minX,xyz.minY);
+        vtile.setData(data, function query(err) {
+            vtile.parse();
 
-    try {
-        var data = vtile.query(lon, lat, { layer: 'contour', tolerance:tolerance });
-    } catch(err) {
-        return callback(err);
-    }
+            try {
+                var data = vtile.query(lon, lat, { layer: 'contour', tolerance:tolerance });
+            } catch(err) {
+                return callback(err);
+            }
 
-    data.sort(function(a, b) {
-        var ad = a.distance || 0;
-        var bd = b.distance || 0;
-        return ad < bd ? -1 : ad > bd ? 1 : 0;
+            data.sort(function(a, b) {
+                var ad = a.distance || 0;
+                var bd = b.distance || 0;
+                return ad < bd ? -1 : ad > bd ? 1 : 0;
+            });
+            if (data.length<1){
+                var elevationOutput = {
+                    distance: -999,
+                    lat: lat,
+                    lon: lon,
+                    elevation: 0
+                }
+            }
+
+            else if (data.length==1){
+                var elevationOutput = {
+                    distance: data[0].distance,
+                    lat: lat,
+                    lon: lon,
+                    elevation: data[0].attributes().ele
+                }
+            }
+
+            else {
+                var distRatio = data[1].distance/(data[0].distance+data[1].distance);
+                var heightDiff = (data[0].attributes().ele-data[1].attributes().ele);
+                var calcEle = data[1].attributes().ele+heightDiff*distRatio;
+
+                var elevationOutput = {
+                    distance: (data[0].distance+data[1].distance)/2,
+                    lat: lat,
+                    lon: lon,
+                    elevation: calcEle
+                }
+            }
+
+            callback(null, elevationOutput);
+        });
     });
-    if (data.length<1){
-        var elevationOutput = {
-            distance: -999,
-            lat: lat,
-            lon: lon,
-            elevation: 0
-        }
-    }
-
-    else if (data.length==1){
-        var elevationOutput = {
-            distance: data[0].distance,
-            lat: lat,
-            lon: lon,
-            elevation: data[0].attributes().ele
-        }
-    }
-
-    else {
-        var distRatio = data[1].distance/(data[0].distance+data[1].distance);
-        var heightDiff = (data[0].attributes().ele-data[1].attributes().ele);
-        var calcEle = data[1].attributes().ele+heightDiff*distRatio;
-
-        var elevationOutput = {
-            distance: (data[0].distance+data[1].distance)/2,
-            lat: lat,
-            lon: lon,
-            elevation: calcEle
-        }
-    }
-
-    callback(null, elevationOutput);
 }
 
 function runTest(done) {
-    var queue = new async();
+    var queue = new async(100);
 
     for (var i = 0; i < decodedPoly.length; i++) {
         queue.defer(getElev, z, decodedPoly[i]);
