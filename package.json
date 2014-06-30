@@ -29,7 +29,8 @@
     "mapnik": "https://github.com/mapnik/node-mapnik/tarball/query-v2",
     "polyline": "0.0.x",
     "request": "^2.36.0",
-    "sphericalmercator": "1.0.x"
+    "sphericalmercator": "1.0.x",
+    "queue-async": "~1.0.7"
   },
   "devDependencies": {
     "mocha": "1.17.x"
