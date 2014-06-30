@@ -8,6 +8,7 @@ var Buffer = require('buffer').Buffer;
 var sphericalmercator = require('sphericalmercator');
 var zlib = require('zlib');
 var fs = require('fs');
+var concat = require('concat-stream')
 
 app.get('/query/:z,:x,:y', cors(), loadVT);
 
@@ -23,28 +24,41 @@ function loadVT(req,res,next) {
     var tileURL = 'https://b.tiles.mapbox.com/v3/mapbox.mapbox-terrain-v1/'+z+'/'+x+'/'+y+'.vector.pbf'
     var options = { url: tileURL, headers: {'accept-encoding': 'gzip,deflate','Content-Type':'application/x-protobuf'}}
 
+    var req = request(options);
+
+    req.on('error', function(err) {
+        res.json({Error:error})
+    });
+
+    req.pipe(zlib.createDeflate()).pipe(concat(function(data) {
+        var vtile = new mapnik.VectorTile(z,x,y);
+        vtile.setData(data);
+        vtile.parse();
+        res.json({Tile:vtile})
+    }));
+
     // request(options).pipe(fs.createWriteStream(y+'.vector.pbf'));
     // var data = fs.readFileSync(y+'.vector.pbf');
     // var vtile = new mapnik.VectorTile(z,x,y);
     // vtile.setData(data);
     // vtile.parse();
     // res.json({err:""})
-    request(options, function (error, response, body) {
-        if (!error && response.statusCode == 200) {
-            var parsed = new Buffer(body,'binary');
-            zlib.deflate(body, function(err,unz) {
-                var parsed = new Buffer(unz);
+    // request(options, function (error, response, body) {
+    //     if (!error && response.statusCode == 200) {
+    //         var parsed = new Buffer(body,'binary');
+    //         zlib.deflate(body, function(err,unz) {
+    //             var parsed = new Buffer(unz);
 
-                var vtile = new mapnik.VectorTile(z,x,y);
-                vtile.setData(parsed);
-                vtile.parse();
-                res.json({tile:""});
-            });
+    //             var vtile = new mapnik.VectorTile(z,x,y);
+    //             vtile.setData(parsed);
+    //             vtile.parse();
+    //             res.json({tile:""});
+    //         });
             
-        }
-        else {
-            res.json({err:error})
-        }
-    });
+    //     }
+    //     else {
+    //         res.json({err:error})
+    //     }
+    //});
 }
 
