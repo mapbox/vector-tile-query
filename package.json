@@ -28,6 +28,7 @@
     "express": "^4.4.5",
     "mapnik": "https://github.com/mapnik/node-mapnik/tarball/query-v2",
     "polyline": "0.0.x",
+    "queue-async": "^1.0.7",
     "request": "^2.36.0",
     "sphericalmercator": "1.0.x"
   },
