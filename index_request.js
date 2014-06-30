@@ -21,8 +21,8 @@ function loadVT(req,res,next) {
     var x = parseInt(req.params.x,10);
     var y = parseInt(req.params.y,10);
 
-    var tileURL = 'https://b.tiles.mapbox.com/v3/mapbox.mapbox-terrain-v1/'+z+'/'+x+'/'+y+'.vector.pbf'
-    var options = { url: tileURL, headers: {'accept-encoding': 'gzip,deflate','Content-Type':'application/x-protobuf'}}
+    var tileURL = 'https://b.tiles.mapbox.com/v3/mapbox.mapbox-terrain-v1/'+z+'/'+x+'/'+y+'.vector.pbf';
+    var options = { url: tileURL };
 
     var req = request(options);
 
@@ -30,7 +30,7 @@ function loadVT(req,res,next) {
         res.json({Error:error})
     });
 
-    req.pipe(zlib.createDeflate()).pipe(concat(function(data) {
+    req.pipe(zlib.createInflate()).pipe(concat(function(data) {
         var vtile = new mapnik.VectorTile(z,x,y);
         vtile.setData(data);
         vtile.parse();
