@@ -46,7 +46,7 @@ function loadVT(req, res, next) {
         var tileName = tileID.z + '/' + tileID.x + '/' + tileID.y;
 
         fs.readFile('tiles/' + tileName + '.vector.pbf', function(err, tileData) {
-            if(err) return false;
+            if (err) return false;
 
             var vtile = new mapnik.VectorTile(tileID.z, tileID.x, tileID.y);
             vtile.setData(tileData);
@@ -70,12 +70,6 @@ function loadVT(req, res, next) {
             return callback(err);
         }
 
-        data.sort(function(a, b) {
-            var ad = a.distance || 0;
-            var bd = b.distance || 0;
-            return ad < bd ? -1 : ad > bd ? 1 : 0;
-        });
-
         if (data.length < 1) {
             var elevationOutput = {
                 distance: -999,
@@ -91,6 +85,13 @@ function loadVT(req, res, next) {
                 elevation: data[0].attributes().ele
             };
         } else {
+
+            data.sort(function(a, b) {
+                var ad = a.distance || 0;
+                var bd = b.distance || 0;
+                return ad < bd ? -1 : ad > bd ? 1 : 0;
+            });
+
             var distRatio = data[1].distance / (data[0].distance + data[1].distance);
             var heightDiff = (data[0].attributes().ele - data[1].attributes().ele);
             var calcEle = data[1].attributes().ele + heightDiff * distRatio;
