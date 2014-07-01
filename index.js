@@ -47,18 +47,21 @@ function loadVT(req, res, next) {
         var queryStart = new Date();
 
         var tileName = tileID.z + '/' + tileID.x + '/' + tileID.y;
-        var tileData = fs.readFileSync('tiles/' + tileName + '.vector.pbf');
 
-        var vtile = new mapnik.VectorTile(tileID.z, tileID.x, tileID.y);
-        vtile.setData(tileData);
-        vtile.parse();
+        fs.readFile('tiles/' + tileName + '.vector.pbf', function(err, tileData) {
+            if(err) return false;
 
-        var outVT = {
-            tileName: tileName,
-            vtile: vtile
-        };
+            var vtile = new mapnik.VectorTile(tileID.z, tileID.x, tileID.y);
+            vtile.setData(tileData);
+            vtile.parse();
 
-        return callback(null, outVT);
+            var outVT = {
+                tileName: tileName,
+                vtile: vtile
+            };
+
+            return callback(null, outVT);
+        });
     }
 
     function findElevations(lonlat, vtile, callback) {
