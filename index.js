@@ -93,7 +93,7 @@ module.exports = function loadVT(decodedPoly, callback) {
         callback(null, elevationOutput);
     }
 
-    var uniqList = [];
+    var uniqCheck = {};
     var uList = [];
     var pointIDs = [];
 
@@ -101,8 +101,8 @@ module.exports = function loadVT(decodedPoly, callback) {
         var xyz = sm.xyz([decodedPoly[i][1], decodedPoly[i][0], decodedPoly[i][1], decodedPoly[i][0]], z);
         var tileName = z + '/' + xyz.minX + '/' + xyz.minY;
         pointIDs.push(tileName);
-        if (uniqList.indexOf(tileName) == -1) {
-            uniqList.push(tileName);
+        if (uniqCheck[tileName] === undefined) {
+            uniqCheck[tileName] = true;
             uList.push({
                 z: z,
                 x: xyz.minX,
