@@ -1,64 +1,127 @@
-
-var express = require('express');
-var cors = require('cors');
-var app = express();
-var request = require('request');
 var mapnik = require('./node_modules/mapnik');
-var Buffer = require('buffer').Buffer;
 var sphericalmercator = require('sphericalmercator');
+var async = require('queue-async');
+var request = require('request');
 var zlib = require('zlib');
-var fs = require('fs');
-var concat = require('concat-stream')
+var concat = require('concat-stream');
+var async = require('queue-async');
+var sm = new sphericalmercator();
 
-app.get('/query/:z,:x,:y', cors(), loadVT);
+module.exports = function loadRemoteVT(decodedPoly, callback) {
+    var allStart = new Date();
+    var VTs = {}
+    var tileQueue = new async();
+    var elevationQueue = new async(100);
+    var z = 14;
+    var tolerance = 1000;
 
-app.listen(8000, function(){
-  console.log('CORS-enabled web server listening on port 8000');
-});
+    function loadDone(err, response) {
+        for (var i = 0; i < decodedPoly.length; i++) {
+            elevationQueue.defer(findElevations, decodedPoly[i], pointIDs[i]);
+        }
+        elevationQueue.awaitAll(queryDone);
+    }
 
-function loadVT(req,res,next) {
-    var z = parseInt(req.params.z,10);
-    var x = parseInt(req.params.x,10);
-    var y = parseInt(req.params.y,10);
+    function queryDone(err, response) {
+        return callback(null, {
+            queryTime: new Date() - allStart,
+            results: response
+        });
+    }
 
-    var tileURL = 'https://b.tiles.mapbox.com/v3/mapbox.mapbox-terrain-v1/'+z+'/'+x+'/'+y+'.vector.pbf';
-    var options = { url: tileURL };
+    function requestTile(tileID, callback) {
+        var queryStart = new Date();
+        var tileName = tileID.z + '/' + tileID.x + '/' + tileID.y;
+        var options = {
+            url: 'https://b.tiles.mapbox.com/v3/mapbox.mapbox-terrain-v1/' + tileID.z + '/' + tileID.x + '/' + tileID.y + '.vector.pbf'
+        };
 
-    var req = request(options);
+        var req = request(options);
 
-    req.on('error', function(err) {
-        res.json({Error:error})
-    });
+        req.on('error', function(err) {
+            res.json({
+                Error: error
+            })
+        });
 
-    req.pipe(zlib.createInflate()).pipe(concat(function(data) {
-        var vtile = new mapnik.VectorTile(z,x,y);
-        vtile.setData(data);
-        vtile.parse();
-        res.json({Tile:vtile})
-    }));
+        req.pipe(zlib.createInflate()).pipe(concat(function(data) {
+            var vtile = new mapnik.VectorTile(tileID.z, tileID.x, tileID.y);
+            vtile.setData(data);
+            vtile.parse();
+            VTs[tileName] = vtile;
+            return callback(null);
+        }));
+    }
 
-    // request(options).pipe(fs.createWriteStream(y+'.vector.pbf'));
-    // var data = fs.readFileSync(y+'.vector.pbf');
-    // var vtile = new mapnik.VectorTile(z,x,y);
-    // vtile.setData(data);
-    // vtile.parse();
-    // res.json({err:""})
-    // request(options, function (error, response, body) {
-    //     if (!error && response.statusCode == 200) {
-    //         var parsed = new Buffer(body,'binary');
-    //         zlib.deflate(body, function(err,unz) {
-    //             var parsed = new Buffer(unz);
+    function findElevations(lonlat, vtile, callback) {
+        var lon = lonlat[1];
+        var lat = lonlat[0];
 
-    //             var vtile = new mapnik.VectorTile(z,x,y);
-    //             vtile.setData(parsed);
-    //             vtile.parse();
-    //             res.json({tile:""});
-    //         });
-            
-    //     }
-    //     else {
-    //         res.json({err:error})
-    //     }
-    //});
+        try {
+            var data = VTs[vtile].query(lon, lat, {
+                layer: 'contour'
+            });
+        } catch (err) {
+            return callback(err);
+        }
+
+        if (data.length < 1) {
+            var elevationOutput = {
+                distance: -999,
+                lat: lat,
+                lon: lon,
+                elevation: 0
+            };
+        } else if (data.length == 1) {
+            var elevationOutput = {
+                distance: data[0].distance,
+                lat: lat,
+                lon: lon,
+                elevation: data[0].attributes().ele
+            };
+        } else {
+
+            data.sort(function(a, b) {
+                var ad = a.distance || 0;
+                var bd = b.distance || 0;
+                return ad < bd ? -1 : ad > bd ? 1 : 0;
+            });
+
+            var distRatio = data[1].distance / (data[0].distance + data[1].distance);
+            var heightDiff = (data[0].attributes().ele - data[1].attributes().ele);
+            var calcEle = data[1].attributes().ele + heightDiff * distRatio;
+            var elevationOutput = {
+                distance: (data[0].distance + data[1].distance) / 2,
+                lat: lat,
+                lon: lon,
+                elevation: calcEle
+            };
+        }
+
+        callback(null, elevationOutput);
+    }
+
+    var uniqCheck = {};
+    var uList = [];
+    var pointIDs = [];
+
+    for (var i = 0; i < decodedPoly.length; i++) {
+        var xyz = sm.xyz([decodedPoly[i][1], decodedPoly[i][0], decodedPoly[i][1], decodedPoly[i][0]], z);
+        var tileName = z + '/' + xyz.minX + '/' + xyz.minY;
+        pointIDs.push(tileName);
+        if (uniqCheck[tileName] === undefined) {
+            uniqCheck[tileName] = true;
+            uList.push({
+                z: z,
+                x: xyz.minX,
+                y: xyz.minY
+            });
+        }
+    }
+
+    for (var i = 0; i < uList.length; i++) {
+        tileQueue.defer(requestTile, uList[i]);
+    }
+
+    tileQueue.awaitAll(loadDone);
 }
-
