@@ -1,13 +1,17 @@
 var mapnik = require('./node_modules/mapnik');
 var sphericalmercator = require('sphericalmercator');
-var fs = require('fs');
 var async = require('queue-async');
+var request = require('request');
+var zlib = require('zlib');
+var concat = require('concat-stream');
+var async = require('queue-async');
+var fs = require('fs');
 var sm = new sphericalmercator();
 
-module.exports = function loadVT(decodedPoly, callback) {
+module.exports = function loadVT(source, decodedPoly, callback) {
     var allStart = new Date();
     var VTs = {}
-    var tileQueue = new async();
+    var tileQueue = new async(100);
     var elevationQueue = new async(100);
     var z = 14;
     var tolerance = 1000;
@@ -27,22 +31,46 @@ module.exports = function loadVT(decodedPoly, callback) {
     }
 
     function loadTiles(tileID, callback) {
-
         var queryStart = new Date();
-
         var tileName = tileID.z + '/' + tileID.x + '/' + tileID.y;
 
-        fs.readFile(__dirname + '/tiles/' + tileName + '.vector.pbf', function(err, tileData) {
-            if (err) throw err;
+        if (source === 'remote') {
+            var options = {
+                url: 'https://b.tiles.mapbox.com/v3/mapbox.mapbox-terrain-v1/' + tileID.z + '/' + tileID.x + '/' + tileID.y + '.vector.pbf'
+            };
 
-            var vtile = new mapnik.VectorTile(tileID.z, tileID.x, tileID.y);
-            vtile.setData(tileData);
-            vtile.parse();
+            var req = request(options);
 
-            VTs[tileName] = vtile;
+            req.on('error', function(err) {
+                res.json({
+                    Error: error
+                })
+            });
 
-            return callback(null);
-        });
+            req.pipe(zlib.createInflate()).pipe(concat(function(data) {
+                var vtile = new mapnik.VectorTile(tileID.z, tileID.x, tileID.y);
+                vtile.setData(data);
+                vtile.parse();
+                VTs[tileName] = vtile;
+                return callback(null);
+            }));
+
+        } else if (source === 'local') {
+            fs.readFile(__dirname + '/tiles/' + tileName + '.vector.pbf', function(err, tileData) {
+                if (err) throw err;
+
+                var vtile = new mapnik.VectorTile(tileID.z, tileID.x, tileID.y);
+                vtile.setData(tileData);
+                vtile.parse();
+
+                VTs[tileName] = vtile;
+
+                return callback(null);
+            });
+
+        } else {
+            return false;
+        }
     }
 
     function findElevations(lonlat, vtile, callback) {

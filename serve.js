@@ -1,19 +1,12 @@
 var express = require('express'),
     cors = require('cors'),
     polyline = require('polyline'),
-    loadVT = require('./index'),
-    loadRemoteVT = require('./index_request');
+    loadVT = require('./index')
 
 var app = express();
 
-app.get('/query-local/:poly', cors(), function(req, res, next) {
-    loadVT(polyline.decode(req.params.poly), function(err, result) {
-        res.json(result);
-    });
-});
-
-app.get('/query-remote/:poly', cors(), function(req, res, next) {
-    loadRemoteVT(polyline.decode(req.params.poly), function(err, result) {
+app.get('/query/:source/:poly', cors(), function(req, res, next) {
+    loadVT(req.params.source, polyline.decode(req.params.poly),function(err, result) {
         res.json(result);
     });
 });
