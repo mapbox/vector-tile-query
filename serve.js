@@ -1,7 +1,7 @@
 var express = require('express'),
     cors = require('cors'),
     polyline = require('polyline'),
-    loadVT = require('./index');
+    loadVT = require('./index'),
     loadRemoteVT = require('./index_request');
 
 var app = express();
