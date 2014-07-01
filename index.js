@@ -16,6 +16,7 @@ app.listen(8000, function() {
 
 function loadVT(req, res, next) {
     var allStart = new Date();
+    var VTs = {}
     var tileQueue = new async();
     var elevationQueue = new async(100);
     var z = 14;
@@ -23,13 +24,9 @@ function loadVT(req, res, next) {
     var decodedPoly = polyline.decode(req.params.poly);
 
     function loadDone(err, response) {
-        var vtiles = {};
-        for (var i = 0; i < response.length; i++) {
-            vtiles[response[i].tileName] = response[i].vtile;
-        }
 
         for (var i = 0; i < decodedPoly.length; i++) {
-            elevationQueue.defer(findElevations, decodedPoly[i], vtiles[pointIDs[i]]);
+            elevationQueue.defer(findElevations, decodedPoly[i], pointIDs[i]);
         }
         elevationQueue.awaitAll(queryDone);
 
@@ -55,12 +52,9 @@ function loadVT(req, res, next) {
             vtile.setData(tileData);
             vtile.parse();
 
-            var outVT = {
-                tileName: tileName,
-                vtile: vtile
-            };
+            VTs[tileName] = vtile;
 
-            return callback(null, outVT);
+            return callback(null);
         });
     }
 
@@ -69,9 +63,8 @@ function loadVT(req, res, next) {
         var lat = lonlat[0];
 
         try {
-            var data = vtile.query(lon, lat, {
-                layer: 'contour',
-                tolerance: tolerance
+            var data = VTs[vtile].query(lon, lat, {
+                layer: 'contour'
             });
         } catch (err) {
             return callback(err);
