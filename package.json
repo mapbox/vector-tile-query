@@ -23,6 +23,8 @@
   },
   "main": "./index",
   "dependencies": {
+    "bench": "^0.3.5",
+    "benchmark": "^1.0.0",
     "concat-stream": "^1.4.6",
     "cors": "^2.3.1",
     "express": "^4.4.5",

@@ -14,81 +14,112 @@ var poly = 'w_pfFt`elVq@BaBhBc@z@ElAP~@Qt@ObAg@fAU~AW`Am@TeAc@}@BGq@Dv@n@Z~@Zx@b
 
 var decodedPoly = polyline.decode(poly);
 
-function getElev(z,lonlat,callback) {
-
-    var lon = lonlat[1];
-    var lat = lonlat[0];
-    var xyz = sm.xyz([lon, lat, lon, lat], z);
-    var tileName = ''+z+'/'+xyz.minX+'/'+xyz.minY;
+function getTile(tileName, xyz, callback) {
     fs.readFile('tiles/'+tileName+'.vector.pbf', function(err, data) {
         if (err) throw err;
-        var vtile = new mapnik.VectorTile(z,xyz.minX,xyz.minY);
+        var vtile = new mapnik.VectorTile(z, xyz.minX, xyz.minY);
         vtile.setData(data, function query(err) {
+            if (err) throw err;
             vtile.parse();
-
-            try {
-                var data = vtile.query(lon, lat, { layer: 'contour', tolerance:tolerance });
-            } catch(err) {
-                return callback(err);
-            }
-
-            data.sort(function(a, b) {
-                var ad = a.distance || 0;
-                var bd = b.distance || 0;
-                return ad < bd ? -1 : ad > bd ? 1 : 0;
-            });
-            if (data.length<1){
-                var elevationOutput = {
-                    distance: -999,
-                    lat: lat,
-                    lon: lon,
-                    elevation: 0
-                }
-            }
-
-            else if (data.length==1){
-                var elevationOutput = {
-                    distance: data[0].distance,
-                    lat: lat,
-                    lon: lon,
-                    elevation: data[0].attributes().ele
-                }
-            }
-
-            else {
-                var distRatio = data[1].distance/(data[0].distance+data[1].distance);
-                var heightDiff = (data[0].attributes().ele-data[1].attributes().ele);
-                var calcEle = data[1].attributes().ele+heightDiff*distRatio;
-
-                var elevationOutput = {
-                    distance: (data[0].distance+data[1].distance)/2,
-                    lat: lat,
-                    lon: lon,
-                    elevation: calcEle
-                }
-            }
-
-            callback(null, elevationOutput);
+            callback(null, vtile);
         });
     });
 }
 
-function runTest(done) {
-    var queue = new async(100);
+function query(vtile, lonlat) {
+    var lon = lonlat[1];
+    var lat = lonlat[0];
+    var data = vtile.query(lon, lat, { layer: 'contour', tolerance:tolerance });
 
-    for (var i = 0; i < decodedPoly.length; i++) {
-        queue.defer(getElev, z, decodedPoly[i]);
+    data.sort(function(a, b) {
+        var ad = a.distance || 0;
+        var bd = b.distance || 0;
+        return ad < bd ? -1 : ad > bd ? 1 : 0;
+    });
+    if (data.length<1){
+        var elevationOutput = {
+            distance: -999,
+            lat: lat,
+            lon: lon,
+            elevation: 0
+        }
     }
 
-    queue.awaitAll(done);
+    else if (data.length==1){
+        var elevationOutput = {
+            distance: data[0].distance,
+            lat: lat,
+            lon: lon,
+            elevation: data[0].attributes().ele
+        }
+    }
+
+    else {
+        var distRatio = data[1].distance/(data[0].distance+data[1].distance);
+        var heightDiff = (data[0].attributes().ele-data[1].attributes().ele);
+        var calcEle = data[1].attributes().ele+heightDiff*distRatio;
+
+        var elevationOutput = {
+            distance: (data[0].distance+data[1].distance)/2,
+            lat: lat,
+            lon: lon,
+            elevation: calcEle
+        }
+    }
+
+    return elevationOutput;
 }
 
-var queue = new async(1);
+exports.compare = {
+    "basic": function (done) {
+        var queue = new async(100);
 
-for (var i = 0; i < 10; i++) {
-    queue.defer(runTest);
-}
+        for (var i = 0; i < decodedPoly.length; i++) {
+            queue.defer(function(lonlat, callback) {
+                var lon = lonlat[1];
+                var lat = lonlat[0];
+                var xyz = sm.xyz([lon, lat, lon, lat], z);
+                var tileName = ''+z+'/'+xyz.minX+'/'+xyz.minY;
+                getTile(tileName, xyz, function(err, vtile) {
+                    if (err) throw err;
+                    callback(null, query(vtile, lonlat));
+                });
+            }, decodedPoly[i]);
+        }
 
-queue.awaitAll(function() {
-    console.log('done');
-});
+        queue.awaitAll(done);
+    },
+
+    "deduped": function (done) {
+        var tiles = {};
+
+        for (var i = 0; i < decodedPoly.length; i++) {
+            var lonlat = decodedPoly[i];
+            var lon = lonlat[1];
+            var lat = lonlat[0];
+            var xyz = sm.xyz([lon, lat, lon, lat], z);
+            var tileName = ''+z+'/'+xyz.minX+'/'+xyz.minY;
+            tiles[tileName] = tiles[tileName] || [];
+            tiles[tileName].xyz = xyz;
+            tiles[tileName].push({ i: i, lonlat: lonlat });
+        }
+
+        var queue = new async(100),
+            out = [];
+
+        for (var tileName in tiles) {
+            queue.defer(function(tileName, xyz, queries, callback) {
+                getTile(tileName, xyz, function(err, vtile) {
+                    for (var i = 0; i < queries.length; i++) {
+                        out[queries[i].i] = query(vtile, queries[i].lonlat);
+                    }
+                    callback();
+                });
+            }, tileName, tiles[tileName].xyz, tiles[tileName]);
+        }
+
+        queue.awaitAll(done);
+    }
+};
+
+require("bench").runMain();
