@@ -81,25 +81,12 @@ module.exports = function loadVT(source, decodedPoly, callback) {
             var data = VTs[vtile].query(lon, lat, {
                 layer: 'contour'
             });
+            var tileLength = data.length;
         } catch (err) {
             return callback(err);
         }
 
-        if (data.length < 1) {
-            var elevationOutput = {
-                distance: -999,
-                lat: lat,
-                lon: lon,
-                elevation: 0
-            };
-        } else if (data.length == 1) {
-            var elevationOutput = {
-                distance: data[0].distance,
-                lat: lat,
-                lon: lon,
-                elevation: data[0].attributes().ele
-            };
-        } else {
+        if (tileLength > 1) {
 
             data.sort(function(a, b) {
                 var ad = a.distance || 0;
@@ -115,6 +102,21 @@ module.exports = function loadVT(source, decodedPoly, callback) {
                 lat: lat,
                 lon: lon,
                 elevation: calcEle
+            };
+
+        } else if (tileLength < 1) {
+            var elevationOutput = {
+                distance: -999,
+                lat: lat,
+                lon: lon,
+                elevation: 0
+            };
+        } else if (tileLength === 1) {
+            var elevationOutput = {
+                distance: data[0].distance,
+                lat: lat,
+                lon: lon,
+                elevation: data[0].attributes().ele
             };
         }
 
