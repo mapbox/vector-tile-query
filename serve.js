@@ -1,12 +1,12 @@
 var express = require('express'),
     cors = require('cors'),
-    polyline = require('polyline'),
-    loadVT = require('./index')
+    loadVT = require('./index');
 
 var app = express();
 
-app.get('/query/:source/:poly', cors(), function(req, res, next) {
-    loadVT(req.params.source, polyline.decode(req.params.poly),function(err, result) {
+app.get('/elevation/:source/:format/:poly', cors(), function(req, res, next) {
+    loadVT(req.params.source, req.params.format, req.params.poly, function(err, result) {
+        if (err) throw err;
         res.json(result);
     });
 });
