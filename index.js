@@ -16,7 +16,14 @@ module.exports = function loadVT(source, format, elevation_data, callback) {
     var elevationQueue = new async(100);
     var z = 14;
     var tolerance = 1000;
-    var decodedPoly = (format === 'polyline') ? polyline.decode(elevation_data) : formatPoints(elevation_data);
+    var decodedPoly = [];
+    if (format === 'polyline') {
+        decodedPoly = polyline.decode(elevation_data);
+    } else if (format === 'path') {
+        decodedPoly = formatPoints(elevation_data);
+    } else {
+        decodedPoly = elevation_data;
+    }
 
     function formatPoints(points, callback) {
         var formattedPointed = [];
