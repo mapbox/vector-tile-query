@@ -22,7 +22,7 @@ module.exports = function loadVT(source, format, elevation_data, callback) {
     function formatPoints(points, callback) {
         var formattedPointed = [];
         points.split(';').map(function(x) {
-            formatData.push([parseFloat(x.split(',')[1]),parseFloat(x.split(',')[0])]);
+            formattedPointed.push([parseFloat(x.split(',')[1]),parseFloat(x.split(',')[0])]);
         });
         return formattedPointed;
     }
