@@ -139,26 +139,30 @@ module.exports = function loadVT(source, format, elevation_data, callback) {
         callback(null, elevationOutput);
     }
 
-    var uniqCheck = {};
-    var uList = [];
+    var tilePoints = {};
     var pointIDs = [];
+
 
     for (var i = 0; i < decodedPoly.length; i++) {
         var xyz = sm.xyz([decodedPoly[i][1], decodedPoly[i][0], decodedPoly[i][1], decodedPoly[i][0]], z);
         var tileName = z + '/' + xyz.minX + '/' + xyz.minY;
         pointIDs.push(tileName);
-        if (uniqCheck[tileName] === undefined) {
-            uniqCheck[tileName] = true;
-            uList.push({
-                z: z,
-                x: xyz.minX,
-                y: xyz.minY
-            });
+        if (tilePoints[tileName] === undefined) {
+            tilePoints[tileName] = {
+                zxy: {
+                    z: z,
+                    x: xyz.minX,
+                    y: xyz.minY
+                },
+                points: [decodedPoly[i]]
+            };
+        } else {
+            tilePoints[tileName].points.push(decodedPoly[i]);
         }
     }
-
-    for (var i = 0; i < uList.length; i++) {
-        tileQueue.defer(loadTiles, uList[i]);
+    
+    for (var i in tilePoints) {
+        tileQueue.defer(loadTiles, tilePoints[i].zxy);
     }
 
     tileQueue.awaitAll(loadDone);
