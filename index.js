@@ -6,15 +6,25 @@ var zlib = require('zlib');
 var concat = require('concat-stream');
 var async = require('queue-async');
 var fs = require('fs');
+var polyline = require('polyline');
 var sm = new sphericalmercator();
 
-module.exports = function loadVT(source, decodedPoly, callback) {
+module.exports = function loadVT(source, format, elevation_data, callback) {
     var allStart = new Date();
     var VTs = {}
     var tileQueue = new async(100);
     var elevationQueue = new async(100);
     var z = 14;
     var tolerance = 1000;
+    var decodedPoly = (format === 'polyline') ? polyline.decode(elevation_data) : formatPoints(elevation_data);
+
+    function formatPoints(points, callback) {
+        var formattedPointed = [];
+        points.split(';').map(function(x) {
+            formattedPointed.push([parseFloat(x.split(',')[1]),parseFloat(x.split(',')[0])]);
+        });
+        return formattedPointed;
+    }
 
     function loadDone(err, response) {
         for (var i = 0; i < decodedPoly.length; i++) {
@@ -62,9 +72,7 @@ module.exports = function loadVT(source, decodedPoly, callback) {
                 var vtile = new mapnik.VectorTile(tileID.z, tileID.x, tileID.y);
                 vtile.setData(tileData);
                 vtile.parse();
-
                 VTs[tileName] = vtile;
-
                 return callback(null);
             });
 
@@ -97,6 +105,7 @@ module.exports = function loadVT(source, decodedPoly, callback) {
             var distRatio = data[1].distance / (data[0].distance + data[1].distance);
             var heightDiff = (data[0].attributes().ele - data[1].attributes().ele);
             var calcEle = data[1].attributes().ele + heightDiff * distRatio;
+
             var elevationOutput = {
                 distance: (data[0].distance + data[1].distance) / 2,
                 lat: lat,
