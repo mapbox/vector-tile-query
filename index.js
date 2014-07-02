@@ -2,7 +2,6 @@ var mapnik = require('./node_modules/mapnik');
 var sphericalmercator = require('sphericalmercator');
 var async = require('queue-async');
 var request = require('request');
-var ss = require('simple-statistics');
 var zlib = require('zlib');
 var concat = require('concat-stream');
 var async = require('queue-async');
