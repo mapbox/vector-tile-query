@@ -3,7 +3,7 @@ api-elevation
 
 1. clone
 2. npm install
-3. `node index.js`
+3. `node serve.js`
 4. got to `localhost:8000`
 
 Choose the type of request to make, either with local data or remote data:
@@ -20,7 +20,7 @@ Create variations of the algorithm in `variations/`.
 
 ```
 $ npm install
-$ node node --prof bench/query.js
+$ node --prof bench/query.js
 $ npm install -g node-tick-processor
 $ node-tick-processor v8.log | less
 ```
