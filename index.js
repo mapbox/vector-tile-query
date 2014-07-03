@@ -14,7 +14,7 @@ module.exports = function loadVT(source, layer, attribute, format, queryData, ca
     var VTs = {};
     var skipVal = 1;
     var tileQueue = new async(100);
-    var elevationQueue = new async(100);
+    var multiQueryQueue = new async(100);
     var z = 14;
     var maximum = 350;
     var tolerance = 1;
@@ -41,12 +41,12 @@ module.exports = function loadVT(source, layer, attribute, format, queryData, ca
 
     function loadDone(err, response) {
         // for (var i = 0; i < decodedPoly.length; i++) {
-        //     elevationQueue.defer(findElevations, decodedPoly[i], pointTileName[i]);
+        //     multiQueryQueue.defer(findElevations, decodedPoly[i], pointTileName[i]);
         // }
         for (var i in tilePoints) {
-            elevationQueue.defer(findElevationsMulti, tilePoints[i].points, tilePoints[i].pointIDs, i);
+            multiQueryQueue.defer(findElevationsMulti, tilePoints[i].points, tilePoints[i].pointIDs, i);
         }
-        elevationQueue.awaitAll(multiQueryDone);
+        multiQueryQueue.awaitAll(multiQueryDone);
     }
 
     function queryDone(err, response) {
@@ -135,25 +135,25 @@ module.exports = function loadVT(source, layer, attribute, format, queryData, ca
                 });
 
                 var distRatio = data[i][1].distance / (data[i][0].distance + data[i][1].distance);
-                var heightDiff = (data[i][0].attributes()[attribute] - data[i][1].attributes().attribute);
-                var calcEle = data[i][1].attributes()[attribute] + heightDiff * distRatio;
+                var valueDiff = (data[i][0].attributes()[attribute] - data[i][1].attributes().attribute);
+                var interpolatedValue = data[i][1].attributes()[attribute] + valueDiff * distRatio;
 
-                var elevationOutput = {
+                var queryOutput = {
                     distance: (data[i][0].distance + data[i][1].distance) / 2,
                     lat: lat,
                     lon: lon,
-                    value: calcEle
+                    value: interpolatedValue
                 };
 
             } else if (tileLength < 1) {
-                var elevationOutput = {
+                var queryOutput = {
                     distance: -999,
                     lat: lat,
                     lon: lon,
                     value: 0
                 };
             } else if (tileLength === 1) {
-                var elevationOutput = {
+                var queryOutput = {
                     distance: data[i][0].distance,
                     lat: lat,
                     lon: lon,
@@ -162,7 +162,7 @@ module.exports = function loadVT(source, layer, attribute, format, queryData, ca
             }
         }
 
-        callback(null, elevationOutput);
+        callback(null, queryOutput);
     }
 
     function findElevationsMulti(lonlats, IDs, vtile, callback) {
@@ -171,7 +171,7 @@ module.exports = function loadVT(source, layer, attribute, format, queryData, ca
             layer: layer
         });
 
-        var outElevs = [];
+        var outValues = [];
 
         for (var i = 0; i < data.length; i++) {
             var currData = data[i];
@@ -185,25 +185,25 @@ module.exports = function loadVT(source, layer, attribute, format, queryData, ca
                 });
 
                 var distRatio = currData[1].distance / (currData[0].distance + currData[1].distance);
-                var heightDiff = (currData[0].attributes()[attribute] - currData[1].attributes()[attribute]);
-                var calcEle = currData[1].attributes()[attribute] + heightDiff * distRatio;
+                var valueDiff = (currData[0].attributes()[attribute] - currData[1].attributes()[attribute]);
+                var interpolatedValue = currData[1].attributes()[attribute] + valueDiff * distRatio;
 
-                var elevationOutput = {
+                var queryOutput = {
                     distance: (currData[0].distance + currData[1].distance) / 2,
                     lat: lonlats[i][1],
                     lon: lonlats[i][0],
-                    value: calcEle
+                    value: interpolatedValue
                 };
 
             } else if (tileLength < 1) {
-                var elevationOutput = {
+                var queryOutput = {
                     distance: -999,
                     lat: lonlats[i][1],
                     lon: lonlats[i][0],
                     value: 0
                 };
             } else if (tileLength === 1) {
-                var elevationOutput = {
+                var queryOutput = {
                     distance: currData[0].distance,
                     lat: lonlats[i][1],
                     lon: lonlats[i][0],
@@ -211,10 +211,10 @@ module.exports = function loadVT(source, layer, attribute, format, queryData, ca
                 };
             }
 
-            outElevs.push(elevationOutput);
+            outValues.push(queryOutput);
         }
 
-        callback(null, outElevs);
+        callback(null, outValues);
     }
 
     var tilePoints = {};
