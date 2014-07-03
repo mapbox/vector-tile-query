@@ -142,7 +142,7 @@ module.exports = function loadVT(source, layer, attribute, format, queryData, ca
                     distance: (data[i][0].distance + data[i][1].distance) / 2,
                     lat: lat,
                     lon: lon,
-                    elevation: calcEle
+                    value: calcEle
                 };
 
             } else if (tileLength < 1) {
@@ -150,14 +150,14 @@ module.exports = function loadVT(source, layer, attribute, format, queryData, ca
                     distance: -999,
                     lat: lat,
                     lon: lon,
-                    elevation: 0
+                    value: 0
                 };
             } else if (tileLength === 1) {
                 var elevationOutput = {
                     distance: data[i][0].distance,
                     lat: lat,
                     lon: lon,
-                    elevation: data[i][0].attributes()[attribute]
+                    value: data[i][0].attributes()[attribute]
                 };
             }
         }
@@ -192,7 +192,7 @@ module.exports = function loadVT(source, layer, attribute, format, queryData, ca
                     distance: (currData[0].distance + currData[1].distance) / 2,
                     lat: lonlats[i][1],
                     lon: lonlats[i][0],
-                    elevation: calcEle
+                    value: calcEle
                 };
 
             } else if (tileLength < 1) {
@@ -200,14 +200,14 @@ module.exports = function loadVT(source, layer, attribute, format, queryData, ca
                     distance: -999,
                     lat: lonlats[i][1],
                     lon: lonlats[i][0],
-                    elevation: 0
+                    value: 0
                 };
             } else if (tileLength === 1) {
                 var elevationOutput = {
                     distance: currData[0].distance,
                     lat: lonlats[i][1],
                     lon: lonlats[i][0],
-                    elevation: currData[0].attributes()[attribute],
+                    value: currData[0].attributes()[attribute],
                 };
             }
 
