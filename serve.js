@@ -4,8 +4,8 @@ var express = require('express'),
 
 var app = express();
 
-app.get('/elevation/:source/:format/:poly', cors(), function(req, res, next) {
-    loadVT(req.params.source, req.params.format, req.params.poly, function(err, result) {
+app.get('/query/:source/:layer/:attribute/:format/:data', cors(), function(req, res, next) {
+    loadVT(req.params.source, req.params.layer, req.params.attribute, req.params.format, req.params.data, function(err, result) {
         if (err) throw err;
         res.json(result);
     });
