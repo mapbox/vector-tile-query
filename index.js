@@ -58,8 +58,10 @@ module.exports = function loadVT(source, format, elevation_data, callback) {
             var bd = b.id || 0;
             return ad < bd ? -1 : ad > bd ? 1 : 0;
         });
-        return callback(null)
-
+        return callback(null,{
+            queryTime: new Date() - allStart,
+            results: elevOutput;
+        });
     }
 
     function loadTiles(tileID, callback) {
@@ -165,7 +167,7 @@ module.exports = function loadVT(source, format, elevation_data, callback) {
         var outElevs = [];
         
         for (var i=0;i<data.length;i++) {
-            var currentData = data[i];
+            var currData = data[i];
             var tileLength = currentData.length;
 
             if (tileLength > 1) {
