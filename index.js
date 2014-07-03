@@ -37,6 +37,9 @@ module.exports = function loadVT(source, format, elevation_data, callback) {
         for (var i = 0; i < decodedPoly.length; i++) {
             elevationQueue.defer(findElevations, decodedPoly[i], pointIDs[i]);
         }
+        for (var i in tilePoints) {
+            console.log(tilePoints[i].points);
+        }
         elevationQueue.awaitAll(queryDone);
     }
 
@@ -46,6 +49,7 @@ module.exports = function loadVT(source, format, elevation_data, callback) {
             results: response
         });
     }
+
 
     function loadTiles(tileID, callback) {
         var queryStart = new Date();
@@ -154,10 +158,18 @@ module.exports = function loadVT(source, format, elevation_data, callback) {
                     x: xyz.minX,
                     y: xyz.minY
                 },
-                points: [decodedPoly[i]]
+                points: [
+                    {
+                        lonlat: decodedPoly[i],
+                        id: i
+                    }
+                ]
             };
         } else {
-            tilePoints[tileName].points.push(decodedPoly[i]);
+            tilePoints[tileName].points.push({
+                lonlat: decodedPoly[i],
+                id: i
+            });
         }
     }
     
