@@ -35,10 +35,10 @@ module.exports = function loadVT(source, format, elevation_data, callback) {
 
     function loadDone(err, response) {
         for (var i = 0; i < decodedPoly.length; i++) {
-            elevationQueue.defer(findElevations, decodedPoly[i], pointIDs[i]);
+            elevationQueue.defer(findElevations, decodedPoly[i], pointTileName[i]);
         }
         for (var i in tilePoints) {
-            console.log(tilePoints[i].points);
+            // defer to findElevationsMulti when ready
         }
         elevationQueue.awaitAll(queryDone);
     }
@@ -50,6 +50,17 @@ module.exports = function loadVT(source, format, elevation_data, callback) {
         });
     }
 
+    function multiQueryDone(err,response) {
+        var elevOutput = [];
+        elevOutput.concat.apply(elevOutput,response);
+        elevOutput.sort(function(a, b) {
+            var ad = a.id || 0;
+            var bd = b.id || 0;
+            return ad < bd ? -1 : ad > bd ? 1 : 0;
+        });
+        return callback(null)
+
+    }
 
     function loadTiles(tileID, callback) {
         var queryStart = new Date();
@@ -143,14 +154,70 @@ module.exports = function loadVT(source, format, elevation_data, callback) {
         callback(null, elevationOutput);
     }
 
+    function findElevationsMulti(lonlats, IDs, vtile, callback) {
+        try {
+            var data = VTs[vtile].query(lonlats, {
+                layer: 'contour'
+            });
+        } catch (err) {
+            return callback(err);
+        }
+        var outElevs = [];
+        
+        for (var i=0;i<data.length;i++) {
+            var currentData = data[i];
+            var tileLength = currentData.length;
+
+            if (tileLength > 1) {
+                currData.sort(function(a, b) {
+                    var ad = a.distance || 0;
+                    var bd = b.distance || 0;
+                    return ad < bd ? -1 : ad > bd ? 1 : 0;
+                });
+
+                var distRatio = currData[1].distance / (currData[0].distance + currData[1].distance);
+                var heightDiff = (currData[0].attributes().ele - currData[1].attributes().ele);
+                var calcEle = currData[1].attributes().ele + heightDiff * distRatio;
+
+                var elevationOutput = {
+                    distance: (currData[0].distance + currData[1].distance) / 2,
+                    lat: lat,
+                    lon: lon,
+                    elevation: calcEle
+                };
+
+            } else if (tileLength < 1) {
+                var elevationOutput = {
+                    distance: -999,
+                    lat: lat,
+                    lon: lon,
+                    elevation: 0
+                };
+            } else if (tileLength === 1) {
+                var elevationOutput = {
+                    distance: currData[0].distance,
+                    lat: lat,
+                    lon: lon,
+                    elevation: currData[0].attributes().ele
+                };
+            }
+            outElevs.push({
+                elevationOutput: elevationOutput,
+                id: IDs[i]
+            });
+        }
+
+        callback(null, outElevs);
+    }
+
     var tilePoints = {};
-    var pointIDs = [];
+    var pointTileName = [];
 
 
     for (var i = 0; i < decodedPoly.length; i++) {
         var xyz = sm.xyz([decodedPoly[i][1], decodedPoly[i][0], decodedPoly[i][1], decodedPoly[i][0]], z);
         var tileName = z + '/' + xyz.minX + '/' + xyz.minY;
-        pointIDs.push(tileName);
+        pointTileName.push(tileName);
         if (tilePoints[tileName] === undefined) {
             tilePoints[tileName] = {
                 zxy: {
@@ -158,18 +225,13 @@ module.exports = function loadVT(source, format, elevation_data, callback) {
                     x: xyz.minX,
                     y: xyz.minY
                 },
-                points: [
-                    {
-                        lonlat: decodedPoly[i],
-                        id: i
-                    }
-                ]
+                points: [decodedPoly[i]],
+                pointIDs: [i]
+
             };
         } else {
-            tilePoints[tileName].points.push({
-                lonlat: decodedPoly[i],
-                id: i
-            });
+            tilePoints[tileName].points.push(decodedPoly[i]);
+            tilePoints[tileName].pointIDs.push(i)
         }
     }
     
