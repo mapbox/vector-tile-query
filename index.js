@@ -11,11 +11,12 @@ var sm = new sphericalmercator();
 
 module.exports = function loadVT(source, format, elevation_data, callback) {
     var allStart = new Date();
-    var VTs = {}
+    var VTs = {};
+    var skipVal = 1;
     var tileQueue = new async(100);
     var elevationQueue = new async(100);
     var z = 14;
-    var tolerance = 1000;
+    var tolerance = 1;
     var decodedPoly = [];
     if (format === 'polyline') {
         decodedPoly = polyline.decode(elevation_data);
@@ -38,9 +39,9 @@ module.exports = function loadVT(source, format, elevation_data, callback) {
         //     elevationQueue.defer(findElevations, decodedPoly[i], pointTileName[i]);
         // }
         for (var i in tilePoints) {
-            elevationQueue.defer(findElevationsMulti, tilePoints[i].points, tilePoints[i], i);
+            elevationQueue.defer(findElevationsMulti, tilePoints[i].points, tilePoints[i].pointIDs, i);
         }
-        elevationQueue.awaitAll(queryDone);
+        elevationQueue.awaitAll(multiQueryDone);
     }
 
     function queryDone(err, response) {
@@ -51,8 +52,9 @@ module.exports = function loadVT(source, format, elevation_data, callback) {
     }
 
     function multiQueryDone(err, response) {
+        var startDone = new Date();
         var elevOutput = [];
-        elevOutput.concat.apply(elevOutput, response);
+        elevOutput = elevOutput.concat.apply(elevOutput,response);
         elevOutput.sort(function(a, b) {
             var ad = a.id || 0;
             var bd = b.id || 0;
@@ -121,7 +123,6 @@ module.exports = function loadVT(source, format, elevation_data, callback) {
         for (var i = 0; i < data.length; i++) {
             var tileLength = data[i].length;
             if (tileLength > 1) {
-
                 data[i].sort(function(a, b) {
                     var ad = a.distance || 0;
                     var bd = b.distance || 0;
@@ -160,11 +161,11 @@ module.exports = function loadVT(source, format, elevation_data, callback) {
     }
 
     function findElevationsMulti(lonlats, IDs, vtile, callback) {
-        console.log(lonlats)
+
             var data = VTs[vtile].queryMany(lonlats, {
                 layer: 'contour'
             });
-            console.log(data);
+
 
         var outElevs = [];
 
@@ -185,30 +186,31 @@ module.exports = function loadVT(source, format, elevation_data, callback) {
 
                 var elevationOutput = {
                     distance: (currData[0].distance + currData[1].distance) / 2,
-                    // lat: lat,
-                    // lon: lon,
-                    elevation: calcEle
+                    lat: lonlats[i][1],
+                    lon: lonlats[i][0],
+                    elevation: calcEle,
+                    id: IDs[i]
                 };
 
             } else if (tileLength < 1) {
                 var elevationOutput = {
                     distance: -999,
-                    lat: lat,
-                    lon: lon,
-                    elevation: 0
+                    lat: lonlats[i][1],
+                    lon: lonlats[i][0],
+                    elevation: 0,
+                    id: IDs[i]
                 };
             } else if (tileLength === 1) {
                 var elevationOutput = {
                     distance: currData[0].distance,
-                    // lat: lat,
-                    // lon: lon,
-                    elevation: currData[0].attributes().ele
+                    lat: lonlats[i][1],
+                    lon: lonlats[i][0],
+                    elevation: currData[0].attributes().ele,
+                    id: IDs[i]
                 };
             }
-            outElevs.push({
-                elevationOutput: elevationOutput,
-                id: IDs[i]
-            });
+
+            outElevs.push(elevationOutput);
         }
 
         callback(null, outElevs);
@@ -218,7 +220,7 @@ module.exports = function loadVT(source, format, elevation_data, callback) {
     var pointTileName = [];
 
 
-    for (var i = 0; i < decodedPoly.length; i++) {
+    for (var i = 0; i < decodedPoly.length; i+=skipVal) {
         var xyz = sm.xyz([decodedPoly[i][1], decodedPoly[i][0], decodedPoly[i][1], decodedPoly[i][0]], z);
         var tileName = z + '/' + xyz.minX + '/' + xyz.minY;
         pointTileName.push(tileName);
