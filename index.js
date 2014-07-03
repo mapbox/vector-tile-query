@@ -1,4 +1,4 @@
-var mapnik = require('./node_modules/mapnik');
+var mapnik = require('mapnik');
 var sphericalmercator = require('sphericalmercator');
 var async = require('queue-async');
 var request = require('request');
@@ -28,17 +28,17 @@ module.exports = function loadVT(source, format, elevation_data, callback) {
     function formatPoints(points, callback) {
         var formattedPointed = [];
         points.split(';').map(function(x) {
-            formattedPointed.push([parseFloat(x.split(',')[1]),parseFloat(x.split(',')[0])]);
+            formattedPointed.push([parseFloat(x.split(',')[1]), parseFloat(x.split(',')[0])]);
         });
         return formattedPointed;
     }
 
     function loadDone(err, response) {
-        for (var i = 0; i < decodedPoly.length; i++) {
-            elevationQueue.defer(findElevations, decodedPoly[i], pointTileName[i]);
-        }
+        // for (var i = 0; i < decodedPoly.length; i++) {
+        //     elevationQueue.defer(findElevations, decodedPoly[i], pointTileName[i]);
+        // }
         for (var i in tilePoints) {
-            // defer to findElevationsMulti when ready
+            elevationQueue.defer(findElevationsMulti, tilePoints[i].points, tilePoints[i], i);
         }
         elevationQueue.awaitAll(queryDone);
     }
@@ -50,17 +50,17 @@ module.exports = function loadVT(source, format, elevation_data, callback) {
         });
     }
 
-    function multiQueryDone(err,response) {
+    function multiQueryDone(err, response) {
         var elevOutput = [];
-        elevOutput.concat.apply(elevOutput,response);
+        elevOutput.concat.apply(elevOutput, response);
         elevOutput.sort(function(a, b) {
             var ad = a.id || 0;
             var bd = b.id || 0;
             return ad < bd ? -1 : ad > bd ? 1 : 0;
         });
-        return callback(null,{
+        return callback(null, {
             queryTime: new Date() - allStart,
-            results: elevOutput;
+            results: elevOutput
         });
     }
 
@@ -118,71 +118,22 @@ module.exports = function loadVT(source, format, elevation_data, callback) {
             return callback(err);
         }
 
-        if (tileLength > 1) {
-
-            data.sort(function(a, b) {
-                var ad = a.distance || 0;
-                var bd = b.distance || 0;
-                return ad < bd ? -1 : ad > bd ? 1 : 0;
-            });
-
-            var distRatio = data[1].distance / (data[0].distance + data[1].distance);
-            var heightDiff = (data[0].attributes().ele - data[1].attributes().ele);
-            var calcEle = data[1].attributes().ele + heightDiff * distRatio;
-
-            var elevationOutput = {
-                distance: (data[0].distance + data[1].distance) / 2,
-                lat: lat,
-                lon: lon,
-                elevation: calcEle
-            };
-
-        } else if (tileLength < 1) {
-            var elevationOutput = {
-                distance: -999,
-                lat: lat,
-                lon: lon,
-                elevation: 0
-            };
-        } else if (tileLength === 1) {
-            var elevationOutput = {
-                distance: data[0].distance,
-                lat: lat,
-                lon: lon,
-                elevation: data[0].attributes().ele
-            };
-        }
-
-        callback(null, elevationOutput);
-    }
-
-    function findElevationsMulti(lonlats, IDs, vtile, callback) {
-        try {
-            var data = VTs[vtile].query(lonlats, {
-                layer: 'contour'
-            });
-        } catch (err) {
-            return callback(err);
-        }
-        var outElevs = [];
-        
-        for (var i=0;i<data.length;i++) {
-            var currData = data[i];
-            var tileLength = currentData.length;
-
+        for (var i = 0; i < data.length; i++) {
+            var tileLength = data[i].length;
             if (tileLength > 1) {
-                currData.sort(function(a, b) {
+
+                data[i].sort(function(a, b) {
                     var ad = a.distance || 0;
                     var bd = b.distance || 0;
                     return ad < bd ? -1 : ad > bd ? 1 : 0;
                 });
 
-                var distRatio = currData[1].distance / (currData[0].distance + currData[1].distance);
-                var heightDiff = (currData[0].attributes().ele - currData[1].attributes().ele);
-                var calcEle = currData[1].attributes().ele + heightDiff * distRatio;
+                var distRatio = data[i][1].distance / (data[i][0].distance + data[i][1].distance);
+                var heightDiff = (data[i][0].attributes().ele - data[i][1].attributes().ele);
+                var calcEle = data[i][1].attributes().ele + heightDiff * distRatio;
 
                 var elevationOutput = {
-                    distance: (currData[0].distance + currData[1].distance) / 2,
+                    distance: (data[i][0].distance + data[i][1].distance) / 2,
                     lat: lat,
                     lon: lon,
                     elevation: calcEle
@@ -197,9 +148,60 @@ module.exports = function loadVT(source, format, elevation_data, callback) {
                 };
             } else if (tileLength === 1) {
                 var elevationOutput = {
-                    distance: currData[0].distance,
+                    distance: data[i][0].distance,
                     lat: lat,
                     lon: lon,
+                    elevation: data[i][0].attributes().ele
+                };
+            }
+        }
+
+        callback(null, elevationOutput);
+    }
+
+    function findElevationsMulti(lonlats, IDs, vtile, callback) {
+        console.log(lonlats)
+            var data = VTs[vtile].queryMany(lonlats, {
+                layer: 'contour'
+            });
+            console.log(data);
+
+        var outElevs = [];
+
+        for (var i = 0; i < data.length; i++) {
+            var currData = data[i];
+            var tileLength = currData.length;
+
+            if (tileLength > 1) {
+                currData.sort(function(a, b) {
+                    var ad = a.distance || 0;
+                    var bd = b.distance || 0;
+                    return ad < bd ? -1 : ad > bd ? 1 : 0;
+                });
+
+                var distRatio = currData[1].distance / (currData[0].distance + currData[1].distance);
+                var heightDiff = (currData[0].attributes().ele - currData[1].attributes().ele);
+                var calcEle = currData[1].attributes().ele + heightDiff * distRatio;
+
+                var elevationOutput = {
+                    distance: (currData[0].distance + currData[1].distance) / 2,
+                    // lat: lat,
+                    // lon: lon,
+                    elevation: calcEle
+                };
+
+            } else if (tileLength < 1) {
+                var elevationOutput = {
+                    distance: -999,
+                    lat: lat,
+                    lon: lon,
+                    elevation: 0
+                };
+            } else if (tileLength === 1) {
+                var elevationOutput = {
+                    distance: currData[0].distance,
+                    // lat: lat,
+                    // lon: lon,
                     elevation: currData[0].attributes().ele
                 };
             }
@@ -227,16 +229,16 @@ module.exports = function loadVT(source, format, elevation_data, callback) {
                     x: xyz.minX,
                     y: xyz.minY
                 },
-                points: [decodedPoly[i]],
+                points: [[decodedPoly[i][1],decodedPoly[i][0]]],
                 pointIDs: [i]
 
             };
         } else {
-            tilePoints[tileName].points.push(decodedPoly[i]);
+            tilePoints[tileName].points.push([decodedPoly[i][1],decodedPoly[i][0]]);
             tilePoints[tileName].pointIDs.push(i)
         }
     }
-    
+
     for (var i in tilePoints) {
         tileQueue.defer(loadTiles, tilePoints[i].zxy);
     }
