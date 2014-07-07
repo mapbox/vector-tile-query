@@ -19,6 +19,8 @@ module.exports = function loadVT(source, layer, attribute, format, queryData, ca
     var maximum = 350;
     var tolerance = 1;
     var decodedPoly = [];
+
+
     if (format === 'encoded_polyline') {
         decodedPoly = polyline.decode(queryData);
     } else if (format === 'points') {
@@ -41,10 +43,10 @@ module.exports = function loadVT(source, layer, attribute, format, queryData, ca
 
     function loadDone(err, response) {
         // for (var i = 0; i < decodedPoly.length; i++) {
-        //     multiQueryQueue.defer(findElevations, decodedPoly[i], pointTileName[i]);
+        //     multiQueryQueue.defer(queryIsoSurface, decodedPoly[i], pointTileName[i]);
         // }
         for (var i in tilePoints) {
-            multiQueryQueue.defer(findElevationsMulti, tilePoints[i].points, tilePoints[i].pointIDs, i);
+            multiQueryQueue.defer(queryIsoSurfaceMulti, tilePoints[i].points, tilePoints[i].pointIDs, i);
         }
         multiQueryQueue.awaitAll(multiQueryDone);
     }
@@ -112,7 +114,7 @@ module.exports = function loadVT(source, layer, attribute, format, queryData, ca
         }
     }
 
-    function findElevations(lonlat, vtile, callback) {
+    function queryIsoSurface(lonlat, vtile, callback) {
         var lon = lonlat[1];
         var lat = lonlat[0];
 
@@ -165,7 +167,7 @@ module.exports = function loadVT(source, layer, attribute, format, queryData, ca
         callback(null, queryOutput);
     }
 
-    function findElevationsMulti(lonlats, IDs, vtile, callback) {
+    function queryIsoSurfaceMulti(lonlats, IDs, vtile, callback) {
 
         var data = VTs[vtile].queryMany(lonlats, {
             layer: layer
