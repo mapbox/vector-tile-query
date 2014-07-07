@@ -10,11 +10,11 @@ var polyline = require('polyline');
 var sm = new sphericalmercator();
 
 module.exports = function loadVT(source, layer, attribute, format, queryData, callback) {
-    var allStart = new Date();
+    var timeBegin = new Date();
     var VTs = {};
     var skipVal = 1;
     var tileQueue = new async(100);
-    var elevationQueue = new async(100);
+    var dataQueue = new async(100);
     var z = 14;
     var maximum = 350;
     var tolerance = 1;
@@ -40,34 +40,24 @@ module.exports = function loadVT(source, layer, attribute, format, queryData, ca
     }
 
     function loadDone(err, response) {
-        // for (var i = 0; i < decodedPoly.length; i++) {
-        //     elevationQueue.defer(findElevations, decodedPoly[i], pointTileName[i]);
-        // }
         for (var i in tilePoints) {
-            elevationQueue.defer(findElevationsMulti, tilePoints[i].points, tilePoints[i].pointIDs, i);
+            dataQueue.defer(findMultiplePoints, tilePoints[i].points, tilePoints[i].pointIDs, i);
         }
-        elevationQueue.awaitAll(multiQueryDone);
-    }
-
-    function queryDone(err, response) {
-        return callback(null, {
-            queryTime: new Date() - allStart,
-            results: response
-        });
+        dataQueue.awaitAll(multiQueryDone);
     }
 
     function multiQueryDone(err, response) {
         var startDone = new Date();
-        var elevOutput = [];
-        elevOutput = elevOutput.concat.apply(elevOutput, response);
-        elevOutput.sort(function(a, b) {
+        var dataOutput = [];
+        dataOutput = dataOutput.concat.apply(dataOutput, response);
+        dataOutput.sort(function(a, b) {
             var ad = a.id || 0;
             var bd = b.id || 0;
             return ad < bd ? -1 : ad > bd ? 1 : 0;
         });
         return callback(null, {
-            queryTime: new Date() - allStart,
-            results: elevOutput
+            queryTime: new Date() - timeBegin,
+            results: dataOutput
         });
     }
 
@@ -112,114 +102,56 @@ module.exports = function loadVT(source, layer, attribute, format, queryData, ca
         }
     }
 
-    function findElevations(lonlat, vtile, callback) {
-        var lon = lonlat[1];
-        var lat = lonlat[0];
-
-        try {
-            var data = VTs[vtile].query(lon, lat, {
-                layer: layer
-            });
-            var tileLength = data.length;
-        } catch (err) {
-            return callback(err);
-        }
-
-        for (var i = 0; i < data.length; i++) {
-            var tileLength = data[i].length;
-            if (tileLength > 1) {
-                data[i].sort(function(a, b) {
-                    var ad = a.distance || 0;
-                    var bd = b.distance || 0;
-                    return ad < bd ? -1 : ad > bd ? 1 : 0;
-                });
-
-                var distRatio = data[i][1].distance / (data[i][0].distance + data[i][1].distance);
-                var heightDiff = (data[i][0].attributes()[attribute] - data[i][1].attributes().attribute);
-                var calcEle = data[i][1].attributes()[attribute] + heightDiff * distRatio;
-
-                var elevationOutput = {
-                    distance: (data[i][0].distance + data[i][1].distance) / 2,
-                    lat: lat,
-                    lon: lon,
-                    value: calcEle
-                };
-
-            } else if (tileLength < 1) {
-                var elevationOutput = {
-                    distance: -999,
-                    lat: lat,
-                    lon: lon,
-                    value: 0
-                };
-            } else if (tileLength === 1) {
-                var elevationOutput = {
-                    distance: data[i][0].distance,
-                    lat: lat,
-                    lon: lon,
-                    value: data[i][0].attributes()[attribute]
-                };
-            }
-        }
-
-        callback(null, elevationOutput);
-    }
-
-    function findElevationsMulti(lonlats, IDs, vtile, callback) {
+    function findMultiplePoints(lonlats, IDs, vtile, callback) {
 
         var data = VTs[vtile].queryMany(lonlats, {
             layer: layer
         });
 
-        var outElevs = [];
+        var outPutData = [];
 
         for (var i = 0; i < data.length; i++) {
-            var currData = data[i];
-            var tileLength = currData.length;
+            var currentPoint = data[i];
+            var tileLength = currentPoint.length;
 
             if (tileLength > 1) {
-                currData.sort(function(a, b) {
+                currentPoint.sort(function(a, b) {
                     var ad = a.distance || 0;
                     var bd = b.distance || 0;
                     return ad < bd ? -1 : ad > bd ? 1 : 0;
                 });
 
-                var distRatio = currData[1].distance / (currData[0].distance + currData[1].distance);
-                var heightDiff = (currData[0].attributes()[attribute] - currData[1].attributes()[attribute]);
-                var calcEle = currData[1].attributes()[attribute] + heightDiff * distRatio;
-
-                var elevationOutput = {
-                    distance: (currData[0].distance + currData[1].distance) / 2,
+                var queryPointOutput = {
                     lat: lonlats[i][1],
                     lon: lonlats[i][0],
-                    value: calcEle
+                    value: [currentPoint[0].attributes()[attribute], currentPoint[1].attributes()[attribute]],
+                    distance: [currentPoint[0].distance, currentPoint[1].distance]
                 };
 
             } else if (tileLength < 1) {
-                var elevationOutput = {
-                    distance: -999,
+                var queryPointOutput = {
                     lat: lonlats[i][1],
                     lon: lonlats[i][0],
-                    value: 0
+                    value: 0,
+                    distance: -999
                 };
             } else if (tileLength === 1) {
-                var elevationOutput = {
-                    distance: currData[0].distance,
+                var queryPointOutput = {
                     lat: lonlats[i][1],
                     lon: lonlats[i][0],
-                    value: currData[0].attributes()[attribute],
+                    value: currentPoint[0].attributes()[attribute],
+                    distance: currentPoint[0].distance
                 };
             }
 
-            outElevs.push(elevationOutput);
+            outPutData.push(queryPointOutput);
         }
 
-        callback(null, outElevs);
+        callback(null, outPutData);
     }
 
     var tilePoints = {};
     var pointTileName = [];
-
 
     for (var i = 0; i < decodedPoly.length; i += skipVal) {
         var xyz = sm.xyz([decodedPoly[i][1], decodedPoly[i][0], decodedPoly[i][1], decodedPoly[i][0]], z);
