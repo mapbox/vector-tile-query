@@ -46,8 +46,10 @@ module.exports = function loadVT(source, layer, attribute, format, skipVal, quer
         for (var i=1; i<idRange; i++) {
             var cID = frPoint.id+i;
             outPoints.push({
-                lat: decodedPoly[[cID]][0],
-                lng: decodedPoly[[cID]][1],
+                latlng: {
+                    lat: decodedPoly[[cID]][0],
+                    lng: decodedPoly[[cID]][1]
+                },
                 value: (1-(i/idRange))*valueRange+toPoint[valueName],
                 id: cID
             });
@@ -56,8 +58,8 @@ module.exports = function loadVT(source, layer, attribute, format, skipVal, quer
     }
 
     function euclideanDistance(fr, to) {
-        a = sm.forward(fr);
-        b = sm.forward(to);
+        a = sm.forward([fr.lng,fr.lat]);
+        b = sm.forward([to.lng,to.lat]);
         var x = a[0] - b[0], y = a[1] - b[1];
         return Math.sqrt((x * x) + (y * y));
     };
@@ -88,7 +90,7 @@ module.exports = function loadVT(source, layer, attribute, format, skipVal, quer
         }
         dataOutput[0].distance = 0;
         for (var i = 1; i < dataOutput.length; i++) {
-            dataOutput[i].distance = euclideanDistance([dataOutput[i-1].lon,dataOutput[i-1].lat],[dataOutput[i].lon,dataOutput[i].lat])+dataOutput[i-1].distance;
+            dataOutput[i].distance = euclideanDistance(dataOutput[i-1].latlng,dataOutput[i].latlng)+dataOutput[i-1].distance;
         }
         return callback(null, {
             queryTime: new Date() - timeBegin,
@@ -157,8 +159,10 @@ module.exports = function loadVT(source, layer, attribute, format, skipVal, quer
                 });
 
                 var queryPointOutput = {
-                    lat: lonlats[i][1],
-                    lon: lonlats[i][0],
+                    latlng: {
+                        lat: lonlats[i][1],
+                        lng: lonlats[i][0]
+                    },
                     value: [currentPoint[0].attributes()[attribute], currentPoint[1].attributes()[attribute]],
                     featureDistance: [currentPoint[0].distance, currentPoint[1].distance],
                     id: IDs[i]
@@ -170,8 +174,10 @@ module.exports = function loadVT(source, layer, attribute, format, skipVal, quer
 
             } else if (tileLength < 1) {
                 var queryPointOutput = {
-                    lat: lonlats[i][1],
-                    lon: lonlats[i][0],
+                    latlng: {
+                        lat: lonlats[i][1],
+                        lng: lonlats[i][0]
+                    },
                     value: 0,
                     featureDistance: -999,
                     id: IDs[i]
@@ -179,8 +185,10 @@ module.exports = function loadVT(source, layer, attribute, format, skipVal, quer
                 queryPointOutput[attribute] = queryPointOutput.value;
             } else if (tileLength === 1) {
                 var queryPointOutput = {
-                    lat: lonlats[i][1],
-                    lon: lonlats[i][0],
+                    latlng: {
+                        lat: lonlats[i][1],
+                        lng: lonlats[i][0]
+                    },
                     value: currentPoint[0].attributes()[attribute],
                     featureDistance: currentPoint[0].distance,
                     id: IDs[i]

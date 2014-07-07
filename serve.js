@@ -3,7 +3,7 @@ var cors = require('cors');
 var loadVT = require('./index');
 var app = express();
 var port = process.env.PORT || 8000;
-var skipValue = 1;
+var skipValue = 5;
 
 function interpolateBetween(frPoint,toPoint,valueName) {
     var valueRange = frPoint[valueName]-toPoint[valueName];
