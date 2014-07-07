@@ -55,6 +55,13 @@ module.exports = function loadVT(source, layer, attribute, format, skipVal, quer
         return outPoints;
     }
 
+    function euclideanDistance(fr, to) {
+        a = sm.forward(fr);
+        b = sm.forward(to);
+        var x = a[0] - b[0], y = a[1] - b[1];
+        return Math.sqrt((x * x) + (y * y));
+    };
+
     function loadDone(err, response) {
         for (var i in tilePoints) {
             dataQueue.defer(findMultiplePoints, tilePoints[i].points, tilePoints[i].pointIDs, i);
@@ -78,6 +85,10 @@ module.exports = function loadVT(source, layer, attribute, format, skipVal, quer
                 interOutput.push(dataOutput[i])
             }
             dataOutput = interOutput;
+        }
+        dataOutput[0].distance = 0;
+        for (var i = 1; i < dataOutput.length; i++) {
+            dataOutput[i].distance = euclideanDistance([dataOutput[i-1].lon,dataOutput[i-1].lat],[dataOutput[i].lon,dataOutput[i].lat])+dataOutput[i-1].distance;
         }
         return callback(null, {
             queryTime: new Date() - timeBegin,
@@ -149,10 +160,10 @@ module.exports = function loadVT(source, layer, attribute, format, skipVal, quer
                     lat: lonlats[i][1],
                     lon: lonlats[i][0],
                     value: [currentPoint[0].attributes()[attribute], currentPoint[1].attributes()[attribute]],
-                    distance: [currentPoint[0].distance, currentPoint[1].distance],
+                    featureDistance: [currentPoint[0].distance, currentPoint[1].distance],
                     id: IDs[i]
                 };
-                var distanceRatio = queryPointOutput.distance[1] / (queryPointOutput.distance[0] + queryPointOutput.distance[1]);
+                var distanceRatio = queryPointOutput.featureDistance[1] / (queryPointOutput.featureDistance[0] + queryPointOutput.featureDistance[1]);
                 var heightDifference = (queryPointOutput.value[0] - queryPointOutput.value[1]);
                 var calculateElevation = queryPointOutput.value[1] + heightDifference * distanceRatio;
                 queryPointOutput[attribute] = calculateElevation;
@@ -162,7 +173,7 @@ module.exports = function loadVT(source, layer, attribute, format, skipVal, quer
                     lat: lonlats[i][1],
                     lon: lonlats[i][0],
                     value: 0,
-                    distance: -999,
+                    featureDistance: -999,
                     id: IDs[i]
                 };
                 queryPointOutput[attribute] = queryPointOutput.value;
@@ -171,7 +182,7 @@ module.exports = function loadVT(source, layer, attribute, format, skipVal, quer
                     lat: lonlats[i][1],
                     lon: lonlats[i][0],
                     value: currentPoint[0].attributes()[attribute],
-                    distance: currentPoint[0].distance,
+                    featureDistance: currentPoint[0].distance,
                     id: IDs[i]
                 };
                 queryPointOutput[attribute] = queryPointOutput.value;
@@ -185,7 +196,7 @@ module.exports = function loadVT(source, layer, attribute, format, skipVal, quer
 
     var tilePoints = {};
     var pointTileName = [];
-    console.log(decodedPoly.length);
+
     for (var i = 0; i < decodedPoly.length; i += skipVal) {
         var xyz = sm.xyz([decodedPoly[i][1], decodedPoly[i][0], decodedPoly[i][1], decodedPoly[i][0]], z);
         var tileName = z + '/' + xyz.minX + '/' + xyz.minY;
