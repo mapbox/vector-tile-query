@@ -9,10 +9,9 @@ var fs = require('fs');
 var polyline = require('polyline');
 var sm = new sphericalmercator();
 
-module.exports = function loadVT(source, layer, attribute, format, queryData, callback) {
+module.exports = function loadVT(source, layer, attribute, format, skipVal, queryData, callback) {
     var timeBegin = new Date();
     var VTs = {};
-    var skipVal = 1;
     var tileQueue = new async(100);
     var dataQueue = new async(100);
     var z = 14;
@@ -39,6 +38,23 @@ module.exports = function loadVT(source, layer, attribute, format, queryData, ca
         return formattedPointed;
     }
 
+    function interpolateBetween(frPoint,toPoint,valueName) {
+        var valueRange = frPoint[valueName]-toPoint[valueName];
+        
+        var idRange = toPoint.id-frPoint.id;
+        var outPoints = [];
+        for (var i=1; i<idRange; i++) {
+            var cID = frPoint.id+i;
+            outPoints.push({
+                lat: decodedPoly[[cID]][0],
+                lng: decodedPoly[[cID]][1],
+                value: (1-(i/idRange))*valueRange+toPoint[valueName],
+                id: cID
+            });
+        }
+        return outPoints;
+    }
+
     function loadDone(err, response) {
         for (var i in tilePoints) {
             dataQueue.defer(findMultiplePoints, tilePoints[i].points, tilePoints[i].pointIDs, i);
@@ -55,6 +71,14 @@ module.exports = function loadVT(source, layer, attribute, format, queryData, ca
             var bd = b.id || 0;
             return ad < bd ? -1 : ad > bd ? 1 : 0;
         });
+        if (skipVal > 1) {
+            var interOutput = [dataOutput[0]];
+            for (var i = 1; i<dataOutput.length; i++) {
+                interOutput = interOutput.concat(interpolateBetween(dataOutput[i-1],dataOutput[i],attribute));
+                interOutput.push(dataOutput[i])
+            }
+            dataOutput = interOutput;
+        }
         return callback(null, {
             queryTime: new Date() - timeBegin,
             results: dataOutput
@@ -125,23 +149,32 @@ module.exports = function loadVT(source, layer, attribute, format, queryData, ca
                     lat: lonlats[i][1],
                     lon: lonlats[i][0],
                     value: [currentPoint[0].attributes()[attribute], currentPoint[1].attributes()[attribute]],
-                    distance: [currentPoint[0].distance, currentPoint[1].distance]
+                    distance: [currentPoint[0].distance, currentPoint[1].distance],
+                    id: IDs[i]
                 };
+                var distanceRatio = queryPointOutput.distance[1] / (queryPointOutput.distance[0] + queryPointOutput.distance[1]);
+                var heightDifference = (queryPointOutput.value[0] - queryPointOutput.value[1]);
+                var calculateElevation = queryPointOutput.value[1] + heightDifference * distanceRatio;
+                queryPointOutput[attribute] = calculateElevation;
 
             } else if (tileLength < 1) {
                 var queryPointOutput = {
                     lat: lonlats[i][1],
                     lon: lonlats[i][0],
                     value: 0,
-                    distance: -999
+                    distance: -999,
+                    id: IDs[i]
                 };
+                queryPointOutput[attribute] = queryPointOutput.value;
             } else if (tileLength === 1) {
                 var queryPointOutput = {
                     lat: lonlats[i][1],
                     lon: lonlats[i][0],
                     value: currentPoint[0].attributes()[attribute],
-                    distance: currentPoint[0].distance
+                    distance: currentPoint[0].distance,
+                    id: IDs[i]
                 };
+                queryPointOutput[attribute] = queryPointOutput.value;
             }
 
             outPutData.push(queryPointOutput);
@@ -152,7 +185,7 @@ module.exports = function loadVT(source, layer, attribute, format, queryData, ca
 
     var tilePoints = {};
     var pointTileName = [];
-
+    console.log(decodedPoly.length);
     for (var i = 0; i < decodedPoly.length; i += skipVal) {
         var xyz = sm.xyz([decodedPoly[i][1], decodedPoly[i][0], decodedPoly[i][1], decodedPoly[i][0]], z);
         var tileName = z + '/' + xyz.minX + '/' + xyz.minY;
@@ -175,7 +208,10 @@ module.exports = function loadVT(source, layer, attribute, format, queryData, ca
             tilePoints[tileName].pointIDs.push(i)
         }
     }
-
+    if (i != decodedPoly.length-1 && skipVal > 1) {
+        tilePoints[tileName].points.push([decodedPoly[decodedPoly.length-1][1], decodedPoly[decodedPoly.length-1][0]]);
+        tilePoints[tileName].pointIDs.push(decodedPoly.length-1)
+    }
     for (var i in tilePoints) {
         tileQueue.defer(loadTiles, tilePoints[i].zxy);
     }
