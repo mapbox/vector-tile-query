@@ -12,12 +12,12 @@ var sm = new sphericalmercator();
 module.exports = function loadVT(source, layer, attribute, format, queryData, callback) {
     var allStart = new Date();
     var VTs = {};
-    var skipVal = 1;
+    var skipVal = 3;
     var tileQueue = new async(100);
     var multiQueryQueue = new async(100);
     var z = 14;
     var maximum = 350;
-    var tolerance = 1;
+    var tolerance = 2;
     var decodedPoly = [];
 
 
@@ -41,6 +41,23 @@ module.exports = function loadVT(source, layer, attribute, format, queryData, ca
         return formattedPointed;
     }
 
+    function interpolateBetween(frPoint,toPoint) {
+        var valueRange = frPoint.value-toPoint.value;
+        var idRange = toPoint.id-frPoint.id;
+        var outPoints = [];
+        for (var i=1; i<idRange; i++) {
+            var cID = frPoint.id+i;
+            outPoints.push({
+                distance: frPoint.distance,
+                lat: decodedPoly[[cID]][0],
+                lng: decodedPoly[[cID]][1],
+                value: (1-(i/idRange))*valueRange+toPoint.value,
+                id: cID
+            });
+        }
+        return outPoints;
+    }
+
     function loadDone(err, response) {
         // for (var i = 0; i < decodedPoly.length; i++) {
         //     multiQueryQueue.defer(queryIsoSurface, decodedPoly[i], pointTileName[i]);
@@ -61,15 +78,20 @@ module.exports = function loadVT(source, layer, attribute, format, queryData, ca
     function multiQueryDone(err, response) {
         var startDone = new Date();
         var elevOutput = [];
+        var interpOutput = [];
         elevOutput = elevOutput.concat.apply(elevOutput, response);
         elevOutput.sort(function(a, b) {
             var ad = a.id || 0;
             var bd = b.id || 0;
             return ad < bd ? -1 : ad > bd ? 1 : 0;
         });
+        for (var i = 0; i<elevOutput.length-1; i++) {
+            interpOutput.push(elevOutput[i]);
+            interpOutput = interpOutput.concat(interpolateBetween(elevOutput[i],elevOutput[i+1]));
+        }
         return callback(null, {
             queryTime: new Date() - allStart,
-            results: elevOutput
+            results: interpOutput
         });
     }
 
@@ -168,7 +190,6 @@ module.exports = function loadVT(source, layer, attribute, format, queryData, ca
     }
 
     function queryIsoSurfaceMulti(lonlats, IDs, vtile, callback) {
-
         var data = VTs[vtile].queryMany(lonlats, {
             layer: layer
         });
@@ -194,7 +215,8 @@ module.exports = function loadVT(source, layer, attribute, format, queryData, ca
                     distance: (currData[0].distance + currData[1].distance) / 2,
                     lat: lonlats[i][1],
                     lon: lonlats[i][0],
-                    value: interpolatedValue
+                    value: interpolatedValue,
+                    id: IDs[i]
                 };
 
             } else if (tileLength < 1) {
@@ -202,7 +224,8 @@ module.exports = function loadVT(source, layer, attribute, format, queryData, ca
                     distance: -999,
                     lat: lonlats[i][1],
                     lon: lonlats[i][0],
-                    value: 0
+                    value: 0,
+                    id: IDs[i]
                 };
             } else if (tileLength === 1) {
                 var queryOutput = {
@@ -210,6 +233,7 @@ module.exports = function loadVT(source, layer, attribute, format, queryData, ca
                     lat: lonlats[i][1],
                     lon: lonlats[i][0],
                     value: currData[0].attributes()[attribute],
+                    id: IDs[i]
                 };
             }
 
