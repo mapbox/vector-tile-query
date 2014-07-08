@@ -71,11 +71,11 @@ module.exports = function loadVT(source, layer, attribute, format, skipVal, quer
         for (var i in tilePoints) {
             dataQueue.defer(findMultiplePoints, tilePoints[i].points, tilePoints[i].pointIDs, i);
         }
+
         dataQueue.awaitAll(multiQueryDone);
     }
 
     function multiQueryDone(err, response) {
-        var startDone = new Date();
         var dataOutput = [];
         dataOutput = dataOutput.concat.apply(dataOutput, response);
         dataOutput.sort(function(a, b) {
@@ -102,7 +102,6 @@ module.exports = function loadVT(source, layer, attribute, format, skipVal, quer
     }
 
     function loadTiles(tileID, callback) {
-        var queryStart = new Date();
         var tileName = tileID.z + '/' + tileID.x + '/' + tileID.y;
 
         if (source === 'remote') {
@@ -186,6 +185,7 @@ module.exports = function loadVT(source, layer, attribute, format, skipVal, quer
                     id: IDs[i]
                 };
                 queryPointOutput[attribute] = queryPointOutput.value;
+                var pass = true;
             } else if (tileLength === 1) {
                 var queryPointOutput = {
                     latlng: {
@@ -198,13 +198,11 @@ module.exports = function loadVT(source, layer, attribute, format, skipVal, quer
                 };
                 queryPointOutput[attribute] = queryPointOutput.value;
             }
-
             outPutData.push(queryPointOutput);
         }
 
         callback(null, outPutData);
     }
-
     var tilePoints = {};
     var pointTileName = [];
 
@@ -237,6 +235,5 @@ module.exports = function loadVT(source, layer, attribute, format, skipVal, quer
     for (var i in tilePoints) {
         tileQueue.defer(loadTiles, tilePoints[i].zxy);
     }
-
     tileQueue.awaitAll(loadDone);
 }
