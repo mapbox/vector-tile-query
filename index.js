@@ -8,7 +8,7 @@ var async = require('queue-async');
 var fs = require('fs');
 var sm = new sphericalmercator();
 
-module.exports = function loadVT(mapid, layer, attribute, skipVal, queryData, callback) {
+module.exports = function queryVT(mapid, layer, attribute, skipVal, queryData, callback) {
     var timeBegin = new Date();
     var VTs = {};
     var tileQueue = new async(100);
