@@ -6,38 +6,16 @@ var zlib = require('zlib');
 var concat = require('concat-stream');
 var async = require('queue-async');
 var fs = require('fs');
-var polyline = require('polyline');
 var sm = new sphericalmercator();
 
-module.exports = function loadVT(source, layer, attribute, format, skipVal, queryData, callback) {
+module.exports = function loadVT(mapid, layer, attribute, skipVal, queryData, callback) {
     var timeBegin = new Date();
     var VTs = {};
     var tileQueue = new async(100);
     var dataQueue = new async(100);
     var z = 14;
-    var maximum = 350;
+    var maximum = 3000;
     var tolerance = 1;
-    var decodedPoly = [];
-    if (format === 'encoded_polyline') {
-        decodedPoly = polyline.decode(queryData);
-    } else if (format === 'points') {
-        decodedPoly = formatPoints(queryData);
-    } else {
-        decodedPoly = queryData;
-    }
-
-    if (decodedPoly.length > maximum) {
-        throw 'Too many points';
-    }
-
-    function formatPoints(points, callback) {
-        var formattedPointed = [];
-        points.split(';').map(function(x) {
-            formattedPointed.push([parseFloat(x.split(',')[1]), parseFloat(x.split(',')[0])]);
-        });
-        return formattedPointed;
-    }
-
 
     function loadDone(err, response) {
         for (var i in tilePoints) {
@@ -64,47 +42,32 @@ module.exports = function loadVT(source, layer, attribute, format, skipVal, quer
     function loadTiles(tileID, callback) {
         var tileName = tileID.z + '/' + tileID.x + '/' + tileID.y;
 
-        if (source === 'remote') {
-            var options = {
-                url: 'https://b.tiles.mapbox.com/v3/mapbox.mapbox-terrain-v1/' + tileID.z + '/' + tileID.x + '/' + tileID.y + '.vector.pbf'
-            };
+        var options = {
+            url: 'https://b.tiles.mapbox.com/v3/' + mapid + '/' + tileID.z + '/' + tileID.x + '/' + tileID.y + '.vector.pbf'
+        };
 
-            var req = request(options);
+        var req = request(options);
 
-            req.on('error', function(err) {
-                res.json({
-                    Error: error
-                })
-            });
+        req.on('error', function(err) {
+            res.json({
+                Error: error
+            })
+        });
 
-            req.pipe(zlib.createInflate()).pipe(concat(function(data) {
-                var vtile = new mapnik.VectorTile(tileID.z, tileID.x, tileID.y);
-                vtile.setData(data);
-                vtile.parse();
-                VTs[tileName] = vtile;
-                return callback(null);
-            }));
-
-        } else if (source === 'local') {
-            fs.readFile(__dirname + '/tiles/' + tileName + '.vector.pbf', function(err, tileData) {
-                if (err) throw err;
-
-                var vtile = new mapnik.VectorTile(tileID.z, tileID.x, tileID.y);
-                vtile.setData(tileData);
-                vtile.parse();
-                VTs[tileName] = vtile;
-                return callback(null);
-            });
-
-        } else {
-            return false;
-        }
+        req.pipe(zlib.createInflate()).pipe(concat(function(data) {
+            var vtile = new mapnik.VectorTile(tileID.z, tileID.x, tileID.y);
+            vtile.setData(data);
+            vtile.parse();
+            VTs[tileName] = vtile;
+            return callback(null);
+        }));
     }
 
     function findMultiplePoints(lonlats, IDs, vtile, callback) {
 
         var data = VTs[vtile].queryMany(lonlats, {
-            layer: layer
+            layer: layer,
+            tolerance: 1000000
         });
 
         var outPutData = [];
@@ -128,6 +91,7 @@ module.exports = function loadVT(source, layer, attribute, format, skipVal, quer
                     featureDistance: (currentPoint[0].distance + currentPoint[1].distance) / 2,
                     id: IDs[i]
                 };
+
                 var distanceRatio = currentPoint[1].distance / (currentPoint[0].distance + currentPoint[1].distance);
                 var queryDifference = (currentPoint[0].attributes()[attribute] - currentPoint[1].attributes()[attribute]);
                 var calculateValue = currentPoint[1].attributes()[attribute] + queryDifference * distanceRatio;
@@ -162,8 +126,8 @@ module.exports = function loadVT(source, layer, attribute, format, skipVal, quer
     }
     var tilePoints = {};
 
-    for (var i = 0; i < decodedPoly.length; i++) {
-        var xyz = sm.xyz([decodedPoly[i][1], decodedPoly[i][0], decodedPoly[i][1], decodedPoly[i][0]], z);
+    for (var i = 0; i < queryData.length; i++) {
+        var xyz = sm.xyz([queryData[i][1], queryData[i][0], queryData[i][1], queryData[i][0]], z);
         var tileName = z + '/' + xyz.minX + '/' + xyz.minY;
         if (tilePoints[tileName] === undefined) {
             tilePoints[tileName] = {
@@ -173,17 +137,16 @@ module.exports = function loadVT(source, layer, attribute, format, skipVal, quer
                     y: xyz.minY
                 },
                 points: [
-                    [decodedPoly[i][1], decodedPoly[i][0]]
+                    [queryData[i][1], queryData[i][0]]
                 ],
                 pointIDs: [i]
 
             };
         } else {
-            tilePoints[tileName].points.push([decodedPoly[i][1], decodedPoly[i][0]]);
+            tilePoints[tileName].points.push([queryData[i][1], queryData[i][0]]);
             tilePoints[tileName].pointIDs.push(i)
         }
     }
-
     for (var i in tilePoints) {
         tileQueue.defer(loadTiles, tilePoints[i].zxy);
     }
