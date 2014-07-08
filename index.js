@@ -53,6 +53,9 @@ module.exports = function loadVT(source, layer, attribute, format, skipVal, quer
                 value: (1-(i/idRange))*valueRange+toPoint[valueName],
                 id: cID
             });
+
+            outPoints[i-1][valueName] = outPoints[i-1].value;
+
         }
         return outPoints;
     }
