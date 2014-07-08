@@ -6,64 +6,44 @@ var zlib = require('zlib');
 var concat = require('concat-stream');
 var async = require('queue-async');
 var fs = require('fs');
-var polyline = require('polyline');
 var sm = new sphericalmercator();
 
-module.exports = function loadVT(source, layer, attribute, format, skipVal, queryData, callback) {
+module.exports = function loadVT(mapid, layer, attribute, skipVal, queryData, callback) {
     var timeBegin = new Date();
     var VTs = {};
     var tileQueue = new async(100);
     var dataQueue = new async(100);
     var z = 14;
-    var maximum = 350;
+    var maximum = 3000;
     var tolerance = 1;
-    var decodedPoly = [];
-    if (format === 'encoded_polyline') {
-        decodedPoly = polyline.decode(queryData);
-    } else if (format === 'points') {
-        decodedPoly = formatPoints(queryData);
-    } else {
-        decodedPoly = queryData;
-    }
 
-    if (decodedPoly.length > maximum) {
-        throw 'Too many points';
-    }
+    function interpolateBetween(frPoint, toPoint, valueName) {
+        var valueRange = frPoint[valueName] - toPoint[valueName];
 
-    function formatPoints(points, callback) {
-        var formattedPointed = [];
-        points.split(';').map(function(x) {
-            formattedPointed.push([parseFloat(x.split(',')[1]), parseFloat(x.split(',')[0])]);
-        });
-        return formattedPointed;
-    }
-
-    function interpolateBetween(frPoint,toPoint,valueName) {
-        var valueRange = frPoint[valueName]-toPoint[valueName];
-        
-        var idRange = toPoint.id-frPoint.id;
+        var idRange = toPoint.id - frPoint.id;
         var outPoints = [];
-        for (var i=1; i<idRange; i++) {
-            var cID = frPoint.id+i;
+        for (var i = 1; i < idRange; i++) {
+            var cID = frPoint.id + i;
             outPoints.push({
                 latlng: {
-                    lat: decodedPoly[[cID]][0],
-                    lng: decodedPoly[[cID]][1]
+                    lat: queryData[[cID]][0],
+                    lng: queryData[[cID]][1]
                 },
-                value: (1-(i/idRange))*valueRange+toPoint[valueName],
+                value: (1 - (i / idRange)) * valueRange + toPoint[valueName],
                 id: cID
             });
 
-            outPoints[i-1][valueName] = outPoints[i-1].value;
+            outPoints[i - 1][valueName] = outPoints[i - 1].value;
 
         }
         return outPoints;
     }
 
     function euclideanDistance(fr, to) {
-        a = sm.forward([fr.lng,fr.lat]);
-        b = sm.forward([to.lng,to.lat]);
-        var x = a[0] - b[0], y = a[1] - b[1];
+        a = sm.forward([fr.lng, fr.lat]);
+        b = sm.forward([to.lng, to.lat]);
+        var x = a[0] - b[0],
+            y = a[1] - b[1];
         return Math.sqrt((x * x) + (y * y));
     };
 
@@ -85,15 +65,16 @@ module.exports = function loadVT(source, layer, attribute, format, skipVal, quer
         });
         if (skipVal > 1) {
             var interOutput = [dataOutput[0]];
-            for (var i = 1; i<dataOutput.length; i++) {
-                interOutput = interOutput.concat(interpolateBetween(dataOutput[i-1],dataOutput[i],attribute));
+            for (var i = 1; i < dataOutput.length; i++) {
+                interOutput = interOutput.concat(interpolateBetween(dataOutput[i - 1], dataOutput[i], attribute));
                 interOutput.push(dataOutput[i])
             }
             dataOutput = interOutput;
         }
+
         dataOutput[0].distance = 0;
         for (var i = 1; i < dataOutput.length; i++) {
-            dataOutput[i].distance = euclideanDistance(dataOutput[i-1].latlng,dataOutput[i].latlng)+dataOutput[i-1].distance;
+            dataOutput[i].distance = euclideanDistance(dataOutput[i - 1].latlng, dataOutput[i].latlng) + dataOutput[i - 1].distance;
         }
         return callback(null, {
             queryTime: new Date() - timeBegin,
@@ -104,47 +85,32 @@ module.exports = function loadVT(source, layer, attribute, format, skipVal, quer
     function loadTiles(tileID, callback) {
         var tileName = tileID.z + '/' + tileID.x + '/' + tileID.y;
 
-        if (source === 'remote') {
-            var options = {
-                url: 'https://b.tiles.mapbox.com/v3/mapbox.mapbox-terrain-v1/' + tileID.z + '/' + tileID.x + '/' + tileID.y + '.vector.pbf'
-            };
+        var options = {
+            url: 'https://b.tiles.mapbox.com/v3/' + mapid + '/' + tileID.z + '/' + tileID.x + '/' + tileID.y + '.vector.pbf'
+        };
 
-            var req = request(options);
+        var req = request(options);
 
-            req.on('error', function(err) {
-                res.json({
-                    Error: error
-                })
-            });
+        req.on('error', function(err) {
+            res.json({
+                Error: error
+            })
+        });
 
-            req.pipe(zlib.createInflate()).pipe(concat(function(data) {
-                var vtile = new mapnik.VectorTile(tileID.z, tileID.x, tileID.y);
-                vtile.setData(data);
-                vtile.parse();
-                VTs[tileName] = vtile;
-                return callback(null);
-            }));
-
-        } else if (source === 'local') {
-            fs.readFile(__dirname + '/tiles/' + tileName + '.vector.pbf', function(err, tileData) {
-                if (err) throw err;
-
-                var vtile = new mapnik.VectorTile(tileID.z, tileID.x, tileID.y);
-                vtile.setData(tileData);
-                vtile.parse();
-                VTs[tileName] = vtile;
-                return callback(null);
-            });
-
-        } else {
-            return false;
-        }
+        req.pipe(zlib.createInflate()).pipe(concat(function(data) {
+            var vtile = new mapnik.VectorTile(tileID.z, tileID.x, tileID.y);
+            vtile.setData(data);
+            vtile.parse();
+            VTs[tileName] = vtile;
+            return callback(null);
+        }));
     }
 
     function findMultiplePoints(lonlats, IDs, vtile, callback) {
 
         var data = VTs[vtile].queryMany(lonlats, {
-            layer: layer
+            layer: layer,
+            tolerance: 1000000
         });
 
         var outPutData = [];
@@ -169,6 +135,7 @@ module.exports = function loadVT(source, layer, attribute, format, skipVal, quer
                     featureDistance: [currentPoint[0].distance, currentPoint[1].distance],
                     id: IDs[i]
                 };
+
                 var distanceRatio = queryPointOutput.featureDistance[1] / (queryPointOutput.featureDistance[0] + queryPointOutput.featureDistance[1]);
                 var queryDifference = (queryPointOutput.value[0] - queryPointOutput.value[1]);
                 var calculateValue = queryPointOutput.value[1] + queryDifference * distanceRatio;
@@ -206,8 +173,8 @@ module.exports = function loadVT(source, layer, attribute, format, skipVal, quer
     var tilePoints = {};
     var pointTileName = [];
 
-    for (var i = 0; i < decodedPoly.length; i += skipVal) {
-        var xyz = sm.xyz([decodedPoly[i][1], decodedPoly[i][0], decodedPoly[i][1], decodedPoly[i][0]], z);
+    for (var i = 0; i < queryData.length; i += skipVal) {
+        var xyz = sm.xyz([queryData[i][1], queryData[i][0], queryData[i][1], queryData[i][0]], z);
         var tileName = z + '/' + xyz.minX + '/' + xyz.minY;
         pointTileName.push(tileName);
         if (tilePoints[tileName] === undefined) {
@@ -218,19 +185,19 @@ module.exports = function loadVT(source, layer, attribute, format, skipVal, quer
                     y: xyz.minY
                 },
                 points: [
-                    [decodedPoly[i][1], decodedPoly[i][0]]
+                    [queryData[i][1], queryData[i][0]]
                 ],
                 pointIDs: [i]
 
             };
         } else {
-            tilePoints[tileName].points.push([decodedPoly[i][1], decodedPoly[i][0]]);
+            tilePoints[tileName].points.push([queryData[i][1], queryData[i][0]]);
             tilePoints[tileName].pointIDs.push(i)
         }
     }
-    if (i != decodedPoly.length-1 && skipVal > 1) {
-        tilePoints[tileName].points.push([decodedPoly[decodedPoly.length-1][1], decodedPoly[decodedPoly.length-1][0]]);
-        tilePoints[tileName].pointIDs.push(decodedPoly.length-1)
+    if (i != queryData.length - 1 && skipVal > 1) {
+        tilePoints[tileName].points.push([queryData[queryData.length - 1][1], queryData[queryData.length - 1][0]]);
+        tilePoints[tileName].pointIDs.push(queryData.length - 1)
     }
     for (var i in tilePoints) {
         tileQueue.defer(loadTiles, tilePoints[i].zxy);
