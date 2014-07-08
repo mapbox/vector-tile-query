@@ -8,14 +8,20 @@ var async = require('queue-async');
 var fs = require('fs');
 var sm = new sphericalmercator();
 
-module.exports = function queryVT(mapid, layer, attribute, skipVal, queryData, callback) {
+module.exports = function queryVT(options, callback) {
+    var mapid = options.mapid;
+    var layer = options.layer;
+    var attribute = options.attribute;
+    var queryData = options.data;
+
+    var z = options.z || 14;
+    var tolerance = options.tolerance || 1;
+    var maximum = options.maximum || 1000;
+
     var timeBegin = new Date();
     var VTs = {};
     var tileQueue = new async(100);
     var dataQueue = new async(100);
-    var z = 14;
-    var maximum = 3000;
-    var tolerance = 1;
 
     function loadDone(err, response) {
         for (var i in tilePoints) {
@@ -67,7 +73,7 @@ module.exports = function queryVT(mapid, layer, attribute, skipVal, queryData, c
 
         var data = VTs[vtile].queryMany(lonlats, {
             layer: layer,
-            tolerance: 1000000
+            tolerance: tolerance
         });
 
         var outPutData = [];
