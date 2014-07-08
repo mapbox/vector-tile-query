@@ -7,6 +7,7 @@ var port = process.env.PORT || 8000;
 var skipValue = 2;
 
 
+
 function formatPoints(points, callback) {
     var formattedPointed = [];
     points.split(';').map(function(x) {
@@ -74,7 +75,14 @@ app.get('/query/:mapid/:layer/:attribute/:format/:data', cors(), function(req, r
         var data = req.params.data;
     }
 
-    loadVT(req.params.mapid, req.params.layer, req.params.attribute, skipValue, data, function(err, result) {
+    var options = {
+        data: data,
+        mapid: req.params.mapid,
+        layer: req.params.layer,
+        attribute: req.params.attribute
+    }
+
+    loadVT(options, function(err, result) {
         console.log(err)
         if (err) throw err;
         res.json(result);
