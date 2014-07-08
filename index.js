@@ -170,9 +170,9 @@ module.exports = function loadVT(source, layer, attribute, format, skipVal, quer
                     id: IDs[i]
                 };
                 var distanceRatio = queryPointOutput.featureDistance[1] / (queryPointOutput.featureDistance[0] + queryPointOutput.featureDistance[1]);
-                var heightDifference = (queryPointOutput.value[0] - queryPointOutput.value[1]);
-                var calculateElevation = queryPointOutput.value[1] + heightDifference * distanceRatio;
-                queryPointOutput[attribute] = calculateElevation;
+                var queryDifference = (queryPointOutput.value[0] - queryPointOutput.value[1]);
+                var calculateValue = queryPointOutput.value[1] + queryDifference * distanceRatio;
+                queryPointOutput[attribute] = calculateValue;
 
             } else if (tileLength < 1) {
                 var queryPointOutput = {
