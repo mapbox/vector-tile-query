@@ -24,6 +24,8 @@ module.exports = function queryVT(options, callback) {
     var dataQueue = new async(100);
 
     function loadDone(err, response) {
+        if(err) return callback(err);
+
         for (var i in tilePoints) {
             dataQueue.defer(findMultiplePoints, tilePoints[i].points, tilePoints[i].pointIDs, i);
         }
@@ -54,19 +56,19 @@ module.exports = function queryVT(options, callback) {
 
         var req = request(options);
 
-        req.on('error', function(err) {
-            res.json({
-                Error: error
-            })
+        req.on('response', function(e) {
+            if (e.statusCode === 200) {
+                req.pipe(zlib.createInflate()).pipe(concat(function(data) {
+                    var vtile = new mapnik.VectorTile(tileID.z, tileID.x, tileID.y);
+                    vtile.setData(data);
+                    vtile.parse();
+                    VTs[tileName] = vtile;
+                    return callback(null);
+                }));
+            } else {
+                return callback(500);
+            }
         });
-
-        req.pipe(zlib.createInflate()).pipe(concat(function(data) {
-            var vtile = new mapnik.VectorTile(tileID.z, tileID.x, tileID.y);
-            vtile.setData(data);
-            vtile.parse();
-            VTs[tileName] = vtile;
-            return callback(null);
-        }));
     }
 
     function findMultiplePoints(lonlats, IDs, vtile, callback) {
