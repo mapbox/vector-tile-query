@@ -1,6 +1,5 @@
 var mapnik = require('mapnik');
 var sphericalmercator = require('sphericalmercator');
-var async = require('queue-async');
 var request = require('request');
 var zlib = require('zlib');
 var concat = require('concat-stream');
@@ -24,7 +23,7 @@ module.exports = function queryVT(options, callback) {
     var dataQueue = new async(100);
 
     function loadDone(err, response) {
-        if(err) return callback(err);
+        if (err) return callback(err);
 
         for (var i in tilePoints) {
             dataQueue.defer(findMultiplePoints, tilePoints[i].points, tilePoints[i].pointIDs, i);
@@ -48,10 +47,11 @@ module.exports = function queryVT(options, callback) {
     }
 
     function loadTiles(tileID, callback) {
+
         var tileName = tileID.z + '/' + tileID.x + '/' + tileID.y;
 
         var options = {
-            url: 'https://b.tiles.mapbox.com/v3/' + mapid + '/' + tileID.z + '/' + tileID.x + '/' + tileID.y + '.vector.pbf'
+            url: 'https://a.tiles.mapbox.com/v3/' + mapid + '/' + tileID.z + '/' + tileID.x + '/' + tileID.y + '.vector.pbf'
         };
 
         var req = request(options);
@@ -66,10 +66,32 @@ module.exports = function queryVT(options, callback) {
                     return callback(null);
                 }));
             } else {
-                return callback(500);
+                // If the first attempt fails, try again but at 0/0/0
+                // This is not ideal, but helps
+                // Needs to be reworked to request tileJSON
+                var optionsSecondAttempt = {
+                    url: 'https://b.tiles.mapbox.com/v3/' + mapid + '/0/0/0.vector.pbf'
+                };
+
+                var reqSecondAttempt = request(optionsSecondAttempt);
+
+                reqSecondAttempt.on('response', function(e) {
+                    if (e.statusCode === 200) {
+                        reqSecondAttempt.pipe(zlib.createInflate()).pipe(concat(function(data) {
+                            var vtile = new mapnik.VectorTile(tileID.z, tileID.x, tileID.y);
+                            vtile.setData(data);
+                            vtile.parse();
+                            VTs[tileName] = vtile;
+                            return callback(null);
+                        }));
+                    } else {
+                        return callback(400);
+                    }
+                });
             }
         });
     }
+
 
     function findMultiplePoints(lonlats, IDs, vtile, callback) {
 
@@ -92,12 +114,12 @@ module.exports = function queryVT(options, callback) {
                 });
 
                 var queryPointOutput = {
+                    id: IDs[i],
                     latlng: {
                         lat: lonlats[i][1],
                         lng: lonlats[i][0]
                     },
-                    featureDistance: (currentPoint[0].distance + currentPoint[1].distance) / 2,
-                    id: IDs[i]
+                    featureDistance: (currentPoint[0].distance + currentPoint[1].distance) / 2
                 };
 
                 var distanceRatio = currentPoint[1].distance / (currentPoint[0].distance + currentPoint[1].distance);
@@ -107,23 +129,22 @@ module.exports = function queryVT(options, callback) {
 
             } else if (tileLength < 1) {
                 var queryPointOutput = {
+                    id: IDs[i],
                     latlng: {
                         lat: lonlats[i][1],
                         lng: lonlats[i][0]
                     },
-                    featureDistance: -999,
-                    id: IDs[i]
+                    featureDistance: null
                 };
-                queryPointOutput[attribute] = 0;
-                var pass = true;
+                queryPointOutput[attribute] = null;
             } else if (tileLength === 1) {
                 var queryPointOutput = {
+                    id: IDs[i],
                     latlng: {
                         lat: lonlats[i][1],
                         lng: lonlats[i][0]
                     },
-                    featureDistance: currentPoint[0].distance,
-                    id: IDs[i]
+                    featureDistance: currentPoint[0].distance
                 };
                 queryPointOutput[attribute] = currentPoint[0].attributes()[attribute];
             }
@@ -132,6 +153,7 @@ module.exports = function queryVT(options, callback) {
 
         callback(null, outPutData);
     }
+
     var tilePoints = {};
 
     for (var i = 0; i < queryData.length; i++) {
@@ -159,4 +181,5 @@ module.exports = function queryVT(options, callback) {
         tileQueue.defer(loadTiles, tilePoints[i].zxy);
     }
     tileQueue.awaitAll(loadDone);
+
 }
