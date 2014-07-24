@@ -32,6 +32,7 @@ module.exports = function queryVT(options, callback) {
     }
 
     function multiQueryDone(err, response) {
+        if(err) return callback(err, null);
         var dataOutput = [];
         dataOutput = dataOutput.concat.apply(dataOutput, response);
         dataOutput.sort(function(a, b) {
@@ -95,10 +96,14 @@ module.exports = function queryVT(options, callback) {
 
     function findMultiplePoints(lonlats, IDs, vtile, callback) {
 
-        var data = VTs[vtile].queryMany(lonlats, {
-            layer: layer,
-            tolerance: tolerance
-        });
+        try {
+            var data = VTs[vtile].queryMany(lonlats, {
+                layer: layer,
+                tolerance: tolerance
+            });
+        } catch (err) {
+            return callback(err, null);
+        }
 
         var outPutData = [];
 
