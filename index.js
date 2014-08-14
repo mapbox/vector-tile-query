@@ -45,7 +45,7 @@ function loadTiles(queryPoints, zoom, loadFunction, callback) {
     tileQueue.awaitAll(loadDone);
 }
 
-function queryVT(vtilePbuf, tileInfo, queryPoints, pointIDs, options, callback) {
+function queryTiles(vtilePbuf, tileInfo, queryPoints, pointIDs, options, callback) {
     var data;
     var outputData = [];
     var field = options.field;
@@ -71,9 +71,9 @@ function queryVT(vtilePbuf, tileInfo, queryPoints, pointIDs, options, callback) 
                 lat: point[1],
                 lng: point[0]
             }
-        }
+        };
         respOutput[fieldName] = fieldValue;
-        return respOutput
+        return respOutput;
     }
 
     try {
@@ -101,10 +101,10 @@ function queryVT(vtilePbuf, tileInfo, queryPoints, pointIDs, options, callback) 
                 queryPointOutput = buildResponse(pointIDs[d],queryPoints[d],field,null);
 
             } else if (tileLength === 1) {
-                queryPointOutput = buildResponse(pointIDs[d],queryPoints[d],field,allData[data.hits[d][0].feature_id].attributes()[field])
+                queryPointOutput = buildResponse(pointIDs[d],queryPoints[d],field,allData[data.hits[d][0].feature_id].attributes()[field]);
 
             } else if (topFeatureDistance === 0) {
-                queryPointOutput = buildResponse(pointIDs[d],queryPoints[d],field,allData[data.hits[d][tileLength - 1].feature_id].attributes()[field])
+                queryPointOutput = buildResponse(pointIDs[d],queryPoints[d],field,allData[data.hits[d][tileLength - 1].feature_id].attributes()[field]);
 
             }
             outputData.push(queryPointOutput);
@@ -126,6 +126,6 @@ function queryVT(vtilePbuf, tileInfo, queryPoints, pointIDs, options, callback) 
 }
 
 module.exports = {
-    queryVT: queryVT,
+    queryTiles: queryTiles,
     loadTiles: loadTiles
 };
