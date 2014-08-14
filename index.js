@@ -1,13 +1,13 @@
 var mapnik = require('mapnik');
 
-module.exports = function queryVT(vtile, queryPoints, options, callback) {
+module.exports = function queryVT(vtile, tileInfo, queryPoints, options, callback) {
     var data;
     var outputData = [];
     var field = options.field;
     var layer = options.layer;
     var tolerance = options.tolerance || 10;
 
-    var vt = new mapnik.VectorTile(14,2704,6251);
+    var vt = new mapnik.VectorTile(tileInfo.z,tileInfo.x,tileInfo.y);
 
     vt.setData(vtile);
 
