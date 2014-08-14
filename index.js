@@ -1,6 +1,51 @@
 var mapnik = require('mapnik');
+var sphericalmercator = require('sphericalmercator');
+var sm = new sphericalmercator();
+var async = require('queue-async');
 
-module.exports = function queryVT(vtile, tileInfo, queryPoints, options, callback) {
+function loadTiles(queryPoints, zoom, loadFunction, callback) {
+    var tilePoints = {};
+    for (var i = 0; i < queryPoints.length; i++) {
+        var xyz = sm.xyz([queryPoints[i][0], queryPoints[i][1], queryPoints[i][0], queryPoints[i][1]], zoom);
+        var tileName = zoom + '/' + xyz.minX + '/' + xyz.minY;
+        if (tilePoints[tileName] === undefined) {
+            tilePoints[tileName] = {
+                zxy: {
+                    z: zoom,
+                    x: xyz.minX,
+                    y: xyz.minY
+                },
+                points: [
+                    [queryPoints[i][0], queryPoints[i][1]]
+                ],
+                pointIDs: [i]
+
+            };
+        } else {
+            tilePoints[tileName].points.push([queryPoints[i][0], queryPoints[i][1]]);
+            tilePoints[tileName].pointIDs.push(i);
+        }
+    }
+    function loader(tileObj, callback) {
+        loadFunction(tilePoints.zxy, function(err, data) {
+            if (err) throw err;
+            tileObj.data = data
+            callback(null, tileObj)
+        });
+    }
+
+    function loadDone(err, tileObj) {
+        return callback(null,tileObj)
+    }
+
+    var tileQueue = new async();
+    for (var i in tilePoints) {
+        tileQueue.defer(loader, tilePoints[i]);
+    }
+    tileQueue.awaitAll(loadDone);
+}
+
+function queryVT(vtile, tileInfo, queryPoints, options, callback) {
     var data;
     var outputData = [];
     var field = options.field;
@@ -102,4 +147,9 @@ module.exports = function queryVT(vtile, tileInfo, queryPoints, options, callbac
     }
 
     callback(null, outputData);
+}
+
+module.exports = {
+    queryVT: queryVT,
+    loadTiles: loadTiles
 }
