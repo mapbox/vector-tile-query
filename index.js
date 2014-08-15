@@ -11,25 +11,16 @@ function sortBy(sortField) {
     };
 }
 
-function deferAndAwait(iterToDefer, doFunction, doneFunction, args) {
-    var functionQueue = new async();
-
-    for (var i in iterToDefer) {
-        functionQueue.defer(doFunction, iterToDefer[i], args);
-    }
-    functionQueue.awaitAll(doneFunction);
-}
-
 function loadTiles(queryPoints, zoom, loadFunction, callback) {
-    function loadTileAsync(tileObj, args, callback) {
-        args.loadFunction(tileObj.zxy, function(err, data) {
+    function loadTileAsync(tileObj, loadFunction, callback) {
+        loadFunction(tileObj.zxy, function(err, data) {
             if (err) return callback(err,null);
             var vt = new mapnik.VectorTile(tileObj.zxy.z,tileObj.zxy.x,tileObj.zxy.y);
             vt.setData(data);
             vt.parse(function(err) {
                 if (err) return callback(err,null);
                 tileObj.data = vt;
-                callback(null, tileObj);
+                return callback(null, tileObj);
             });
         });
     }
@@ -65,9 +56,13 @@ function loadTiles(queryPoints, zoom, loadFunction, callback) {
     }
 
     var tilePoints = buildQuery(queryPoints,zoom);
+    var loadQueue = new async();
 
-    deferAndAwait(tilePoints,loadTileAsync,loadDone,{loadFunction:loadFunction});
+    for (var i in tilePoints) {
+        loadQueue.defer(loadTileAsync,tilePoints[i],loadFunction);
+    }
 
+    loadQueue.awaitAll(loadDone);
 }
 
 function queryTile(vt, tileInfo, queryPoints, pointIDs, options, callback) {
@@ -83,6 +78,7 @@ function queryTile(vt, tileInfo, queryPoints, pointIDs, options, callback) {
         respOutput[fieldName] = fieldValue;
         return respOutput;
     }
+
     var data;
     var outputData = [];
     var field = options.field;
@@ -129,25 +125,26 @@ function queryTile(vt, tileInfo, queryPoints, pointIDs, options, callback) {
                 outputData.push(queryPointOutput);
             }
             return callback(null, outputData);
+
         } else {
             return callback(err, null);
         }
     }
 
-    callback(null, outputData);
+    return callback(null, outputData);
 }
 
 function multiQuery(dataArr,options,callback) {
 
     function queryEach(data, callback) {
         queryTile(data.data, data.zxy, data.points, data.pointIDs, options, function(err, queryData) {
-            if (err) callback(err);
+            if (err) return callback(err);
             return callback(null, queryData);
         });
     }
 
     function queriesDone(err, queries) {
-        if (err) callback(err);
+        if (err) return callback(err);
         var dataOutput = [];
         dataOutput = dataOutput.concat.apply(dataOutput, queries);
         dataOutput.sort(sortBy('id'));
