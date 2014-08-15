@@ -3,6 +3,14 @@ var sphericalmercator = require('sphericalmercator');
 var sm = new sphericalmercator();
 var async = require('queue-async');
 
+function sortBy(sortField) {
+    return function sortCallback(a, b) {
+        var ad = a[sortField] || 0;
+        var bd = b[sortField] || 0;
+        return ad < bd ? -1 : ad > bd ? 1 : 0;
+    };
+}
+
 function loadTiles(queryPoints, zoom, loadFunction, callback) {
     var tilePoints = {};
     for (var i = 0; i < queryPoints.length; i++) {
@@ -28,9 +36,14 @@ function loadTiles(queryPoints, zoom, loadFunction, callback) {
     }
     function loader(tileObj, loadFunc, callback) {
         loadFunc(tileObj.zxy, function(err, data) {
-            if (err) throw err;
-            tileObj.data = data;
-            callback(null, tileObj);
+            if (err) return callback(err,null);
+            var vt = new mapnik.VectorTile(tileObj.zxy.z,tileObj.zxy.x,tileObj.zxy.y);
+            vt.setData(data);
+            vt.parse(function(err) {
+                if (err) return callback(err,null);
+                tileObj.data = vt;
+                callback(null, tileObj);
+            });
         });
     }
 
@@ -45,24 +58,12 @@ function loadTiles(queryPoints, zoom, loadFunction, callback) {
     tileQueue.awaitAll(loadDone);
 }
 
-function queryTiles(vtilePbuf, tileInfo, queryPoints, pointIDs, options, callback) {
+function queryTile(vt, tileInfo, queryPoints, pointIDs, options, callback) {
     var data;
     var outputData = [];
     var field = options.field;
     var layer = options.layer;
     var tolerance = options.tolerance || 10;
-
-    var vt = new mapnik.VectorTile(tileInfo.z,tileInfo.x,tileInfo.y);
-
-    vt.setData(vtilePbuf);
-
-    vt.parse();
-
-    function sortCallback(a, b) {
-        var ad = a.distance || 0;
-        var bd = b.distance || 0;
-        return ad < bd ? -1 : ad > bd ? 1 : 0;
-    }
 
     function buildResponse(id,point,fieldName,fieldValue) {
         var respOutput = {
@@ -83,7 +84,7 @@ function queryTiles(vtilePbuf, tileInfo, queryPoints, pointIDs, options, callbac
         });
 
         for (var d = 0; d < Object.keys(data.hits).length; d++) {
-            data.hits[d].sort(sortCallback);
+            data.hits[d].sort(sortBy('distance'));
             var currentPoint = data.hits[d];
             var allData = data.features;
             var tileLength = currentPoint.length;
@@ -125,7 +126,33 @@ function queryTiles(vtilePbuf, tileInfo, queryPoints, pointIDs, options, callbac
     callback(null, outputData);
 }
 
+function multiQuery(dataArr,options,callback) {
+    var queryQueue = new async();
+
+    function queryEach(data, callback) {
+        queryTile(data.data, data.zxy, data.points, data.pointIDs, options, function(err, queryData) {
+            if (err) callback(err);
+            return callback(null, queryData);
+        });
+    }
+
+    function queriesDone(err, queries) {
+        if (err) callback(err);
+        var dataOutput = [];
+        dataOutput = dataOutput.concat.apply(dataOutput, queries);
+        dataOutput.sort(sortBy('id'));
+        return callback(null, dataOutput);
+    }
+
+    for (var i = 0; i<dataArr.length; i++) {
+        queryQueue.defer(queryEach, dataArr[i]);
+    }
+
+    queryQueue.awaitAll(queriesDone);
+}
+
 module.exports = {
-    queryTiles: queryTiles,
-    loadTiles: loadTiles
+    queryTile: queryTile,
+    loadTiles: loadTiles,
+    multiQuery: multiQuery
 };
