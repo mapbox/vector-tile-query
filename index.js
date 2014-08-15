@@ -12,9 +12,10 @@ function sortBy(sortField) {
 }
 
 function loadTiles(queryPoints, zoom, loadFunction, callback) {
+
     function loadTileAsync(tileObj, loadFunction, callback) {
         loadFunction(tileObj.zxy, function(err, data) {
-            if (err) return callback(err,null);
+            if (err) return callback(new Error('Tile not loaded'));
             var vt = new mapnik.VectorTile(tileObj.zxy.z,tileObj.zxy.x,tileObj.zxy.y);
             vt.setData(data);
             vt.parse(function(err) {
@@ -26,6 +27,7 @@ function loadTiles(queryPoints, zoom, loadFunction, callback) {
     }
 
     function loadDone(err, tileObj) {
+        if (err) return callback(err, null);
         return callback(null,tileObj);
     }
 
@@ -81,8 +83,8 @@ function queryTile(vt, tileInfo, queryPoints, pointIDs, options, callback) {
 
     var data;
     var outputData = [];
-    var field = options.field;
-    var layer = options.layer;
+    var field = options.field || callback(new Error("No field specified"));
+    var layer = options.layer || callback(new Error("No layer specified"))
     var tolerance = options.tolerance || 10;
 
     try {
@@ -91,6 +93,7 @@ function queryTile(vt, tileInfo, queryPoints, pointIDs, options, callback) {
             tolerance: tolerance
         });
 
+        if (data.features[0].attributes()[field] === undefined) return callback(new Error('Field "'+field+'" not found in tile'));
         for (var i = 0; i < Object.keys(data.hits).length; i++) {
             data.hits[i].sort(sortBy('distance'));
             var currentPoint = data.hits[i];
@@ -130,7 +133,7 @@ function queryTile(vt, tileInfo, queryPoints, pointIDs, options, callback) {
             return callback(err, null);
         }
     }
-
+    console.log(outputData);
     return callback(null, outputData);
 }
 
