@@ -13,6 +13,8 @@ function sortBy(sortField) {
 
 function loadTiles(queryPoints, zoom, loadFunction, callback) {
 
+    if (!queryPoints[0].length) return callback(new Error("Invalid query points"));
+
     function loadTileAsync(tileObj, loadFunction, callback) {
         loadFunction(tileObj.zxy, function(err, data) {
             if (err) return callback(new Error('Tile not loaded'));
@@ -133,7 +135,6 @@ function queryTile(vt, tileInfo, queryPoints, pointIDs, options, callback) {
             return callback(err, null);
         }
     }
-    console.log(outputData);
     return callback(null, outputData);
 }
 

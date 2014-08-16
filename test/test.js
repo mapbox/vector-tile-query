@@ -74,13 +74,12 @@ describe('Test for matching queries', function() {
     });
 });
 
-describe('Test for bad tile types', function() {
+describe('Test for invalid points', function() {
     it('should not work for point queries', function(done) {
-        var queryPoints = [[-122.4242377281189,37.775718243274575],[-122.42610454559325,37.775480796463874]];
+        var queryPoints = [-122.4242377281189,37.775718243274575];
         vtileQuery.loadTiles(queryPoints,15,readTile, function (err,data) {
-            vtileQuery.multiQuery(data, {tolerance:10,layer:'SanFranciscoTransitFrequency',field:'SumTrp_wk'}, function(err, queryData) {
-                done();
-            });
+            assert.equal(err.message,"Invalid query points")
+            done();
         });
     });
 });
