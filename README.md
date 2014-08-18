@@ -60,7 +60,7 @@ Array of "tile objects" with tile zxy, query points within that tile, ids of the
 
 ### multiQuery(dataArr,options,callback)
 
-Given a set of "tile objects", asynchronously query (using `queryTile`) and return sorted values (based on input order / input point ids).
+Helper function to asynchronously query (using `queryTile` (given a set of "tile objects") and return sorted values (based on input order / input point ids).
 
 #### Input
 
@@ -68,7 +68,7 @@ Given a set of "tile objects", asynchronously query (using `queryTile`) and retu
 * `options`: `options` as described above in `queryTile`
 * `callback`: `function(err,data) {...}` to call upon completion
 
-### Output
+#### Output
 
 Array (with one record per input `lng,lat`) of values:
 ```
@@ -81,4 +81,10 @@ Array (with one record per input `lng,lat`) of values:
     },
     ...
 ]
+```
+
+### Usage
+```
+git clone https://github.com/mapbox/vector-tile-query.git
+npm install
 ```
