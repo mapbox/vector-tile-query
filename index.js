@@ -141,9 +141,8 @@ function queryTile(pbuf, tileInfo, queryPoints, pointIDs, options, callback) {
     if (fields && fields.length === 0) {
         callback(new Error('Field array empty'));
     }
-
     var vt = new mapnik.VectorTile(tileInfo.z,tileInfo.x,tileInfo.y);
-    vt.setData(pbuf );
+    vt.setData(pbuf);
     vt.parse(function(err) {
         if (err) return callback(err,null);
         try {
