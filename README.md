@@ -5,14 +5,14 @@ vector-tile-query allows you to query vector tiles and return data values from t
 
 ### `queryTile(<pbuf>, <tileInfo>, <queryPoints>, <pointIDs>, <options>, <callback>);`
 
-Parses a Vector Tile protobuf and queries a layer for a a number of fields based on a series of lng, lat points
+Parses a Vector Tile protobuf and queries a layer for a a number of fields based on a series of lat, lngs points
 
 #### Input
 
 * `pbuf`: vector tile (`pbuf`)
 * `tileInfo`: tile Z,X,Y ('tileinfo: {z:<z>,x:<x>,y:<y>}')
-* `queryPoints`: `array` of `lng, lat`s (`[[lng,lat],[lng,lat]...]`)
-* `pointIDs`: `array` of point IDs that correspond to order of query `lng,lat`s (`[0,1,2...]`)
+* `queryPoints`: `array` of `lat, lngs`s (`[[lat,lng],[lat,lng]...]`)
+* `pointIDs`: `array` of point IDs that correspond to order of query `lat,lng`s (`[0,1,2...]`)
 * `options`: options for query:
  * `layer`: layer within the tile source to query. Example: `contour`
  * `fields`: `array` of fields within the layer to return data for. Example [`ele`]
@@ -20,7 +20,7 @@ Parses a Vector Tile protobuf and queries a layer for a a number of fields based
 
 #### Output
 
-Array (with one record per input `lng,lat`) of values:
+Array (with one record per input `lat,lng`) of values:
 ```
 [
     {
@@ -35,11 +35,11 @@ Array (with one record per input `lng,lat`) of values:
 
 ### `loadTiles(<queryPoints>, <zoom>, <loadFunction>, <callback>)`
 
-Given a set of `lng,lat` points and a zoom level, finds what tiles to load, loads these tiles asynchronously (using a defined function), splits query `lng, lat`s out per tile, and assigns these a sequential ID (based on input order)
+Given a set of `lat,lng` points and a zoom level, finds what tiles to load, loads these tiles asynchronously (using a defined function), splits query `lat, lngs`s out per tile, and assigns these a sequential ID (based on input order)
 
 #### Input
 
-* `queryPoints`: `array` of `lng, lat`s (`[[lng,lat],[lng,lat]...]`)
+* `queryPoints`: `array` of `lat, lngs`s (`[[lat,lng],[lat,lng]...]`)
 * `zoom`: zoom level of tiles to query
 * `loadFunction`: function to load tiles / should return a `pbuf`
 * `callback`: `function(err,data) {...}` to call upon completion
@@ -50,7 +50,7 @@ Array of "tile objects" with tile zxy, query points within that tile, ids of the
 [
     {
         zxy: { z: <z>, x: <x>, y: <y> },
-        points: [ [lng,lat], [lng,lat], ... ],
+        points: [ [lat,lng], [lat,lng], ... ],
         pointIDs: [ 0, 1, ... ],
         data: <vtile pbuf>
     } 
@@ -70,7 +70,7 @@ Helper function to asynchronously query (using `queryTile` (given a set of "tile
 
 #### Output
 
-Array (with one record per input `lng,lat`) of values:
+Array (with one record per input `lat,lng`) of values:
 ```
 [
     {

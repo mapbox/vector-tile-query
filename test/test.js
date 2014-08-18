@@ -12,7 +12,7 @@ function readTile(tile,callback) {
 
 describe('Load relevant tiles from list of coords', function() {
     it('should fail if tile does not exist', function(done) {
-        var queryCoords = [[-122.747147, 37.934205], [-122.747461, 37.934721], [-122.747993, 38.93512]];
+        var queryCoords = [[37.934205,-122.747147], [37.934721, -122.747461], [38.93512, -122.747993]];
         vtileQuery.loadTiles(queryCoords,14,readTile, function (err,data) {
             assert.equal(err.message,"Tile not loaded")
             done();
@@ -21,7 +21,7 @@ describe('Load relevant tiles from list of coords', function() {
 });
 
 describe('Make sure layers and fields are specified', function() {
-    var queryCoords = [[-122.747147, 37.934205], [-122.747461, 37.934721], [-122.747993, 37.93512]];
+    var queryCoords = [[37.934205, -122.747147], [37.934721, -122.747461], [37.93512, -122.747993]];
     it('should fail if layer not specified', function(done) {
         vtileQuery.loadTiles(queryCoords,14,readTile, function (err,data) {
             vtileQuery.multiQuery(data, {tolerance:10,fields:['ele']}, function(err, queryData) {
@@ -52,7 +52,7 @@ describe('Make sure layers and fields are specified', function() {
 
 describe('Tests for matching queries', function() {
     it('elevation (polyline) return should match', function(done) {
-        var queryPoints = [[-122.747147, 37.934205], [-122.747461, 37.934721]];
+        var queryPoints = [[37.934205, -122.747147], [37.934721, -122.747461]];
         var validResponse = '[{"id":0,"latlng":{"lat":37.934205,"lng":-122.747147},"ele":81.3189156103434},{"id":1,"latlng":{"lat":37.934721,"lng":-122.747461},"ele":85.1838043599294}]'
         vtileQuery.loadTiles(queryPoints,14,readTile, function (err,data) {
             vtileQuery.multiQuery(data, {tolerance:10,layer:'contour',fields:['ele']}, function(err, queryData) {
@@ -62,7 +62,7 @@ describe('Tests for matching queries', function() {
         });
     });
     it('multiple field query should match', function(done) {
-        var queryPoints = [[-122.747147, 37.934205], [-122.747461, 37.934721]];
+        var queryPoints = [[37.934205, -122.747147], [37.934721, -122.747461]];
         var validResponse = '[{"id":0,"latlng":{"lat":37.934205,"lng":-122.747147},"ele":81.3189156103434,"index":1.8681084389656604},{"id":1,"latlng":{"lat":37.934721,"lng":-122.747461},"ele":85.1838043599294,"index":1.48161956400706}]'
         vtileQuery.loadTiles(queryPoints,14,readTile, function (err,data) {
             vtileQuery.multiQuery(data, {tolerance:10,layer:'contour',fields:['ele','index']}, function(err, queryData) {
@@ -73,7 +73,7 @@ describe('Tests for matching queries', function() {
     });
 
     it('landcover (stackedpolygon) return should match', function(done) {
-        var queryPoints = [[-122.747147, 37.934205], [-122.747461, 37.934721]];
+        var queryPoints = [[37.934205, -122.747147], [37.934721, -122.747461]];
         var validResponse = '[{"id":0,"latlng":{"lat":37.934205,"lng":-122.747147},"class":"scrub"},{"id":1,"latlng":{"lat":37.934721,"lng":-122.747461},"class":"wood"}]';
         vtileQuery.loadTiles(queryPoints,14,readTile, function (err,data) {
             vtileQuery.multiQuery(data, {tolerance:10,layer:'landcover',fields:['class']}, function(err, queryData) {
@@ -87,7 +87,7 @@ describe('Tests for matching queries', function() {
 
 describe('Test for invalid points', function() {
     it('should not work for point queries', function(done) {
-        var queryPoints = [-122.4242377281189,37.775718243274575];
+        var queryPoints = [37.775718243274575,-122.4242377281189];
         vtileQuery.loadTiles(queryPoints,15,readTile, function (err,data) {
             assert.equal(err.message,"Invalid query points")
             done();

@@ -31,7 +31,7 @@ function loadTiles(queryPoints, zoom, loadFunction, callback) {
     function buildQuery(points, zoom) {
         var queryObject = {};
         for (var i = 0; i < points.length; i++) {
-            var xyz = sm.xyz([points[i][0], points[i][1], points[i][0], points[i][1]], zoom);
+            var xyz = sm.xyz([points[i][1], points[i][0], points[i][1], points[i][0]], zoom);
             var tileName = zoom + '/' + xyz.minX + '/' + xyz.minY;
             if (queryObject[tileName] === undefined) {
                 queryObject[tileName] = {
@@ -41,13 +41,13 @@ function loadTiles(queryPoints, zoom, loadFunction, callback) {
                         y: xyz.minY
                     },
                     points: [
-                        [points[i][0], points[i][1]]
+                        [points[i][1], points[i][0]]
                     ],
                     pointIDs: [i]
 
                 };
             } else {
-                queryObject[tileName].points.push([points[i][0], points[i][1]]);
+                queryObject[tileName].points.push([points[i][1], points[i][0]]);
                 queryObject[tileName].pointIDs.push(i);
             }
         }
@@ -141,6 +141,7 @@ function queryTile(pbuf, tileInfo, queryPoints, pointIDs, options, callback) {
     if (fields && fields.length === 0) {
         callback(new Error('Field array empty'));
     }
+
     var vt = new mapnik.VectorTile(tileInfo.z,tileInfo.x,tileInfo.y);
     vt.setData(pbuf);
     vt.parse(function(err) {
