@@ -64,7 +64,7 @@ Helper function to asynchronously query (using `queryTile` (given a set of "tile
 
 #### Input
 
-* `dataArr`: `array` of "tileObjects" as described above - one for each tile that will be queried
+* `dataArr`: `array` of "tileObjects" as described above - one record for each tile that will be queried
 * `options`: `options` as described above in `queryTile`
 * `callback`: `function(err,data) {...}` to call upon completion
 
