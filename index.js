@@ -134,9 +134,13 @@ function queryTile(pbuf, tileInfo, queryPoints, pointIDs, options, callback) {
 
     var data;
     var outputData = [];
-    var fields = options.fields || callback(new Error("No fields specified"));
-    var layer = options.layer || callback(new Error("No layer specified"))
+    var fields = options.fields || callback(new Error('Field(s) not specified'));
+    var layer = options.layer || callback(new Error('No layer specified'));
     var tolerance = options.tolerance || 10;
+
+    if (fields && fields.length === 0) {
+        callback(new Error('Field array empty'));
+    }
 
     var vt = new mapnik.VectorTile(tileInfo.z,tileInfo.x,tileInfo.y);
     vt.setData(pbuf );
