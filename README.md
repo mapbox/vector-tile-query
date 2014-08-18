@@ -3,7 +3,7 @@ vector-tile-query
 
 vector-tile-query allows you to query vector tiles and return data values from these tiles. This module consists of one main function, and two utility / helper functions.
 
-### `vector-tile-query.queryTile(<pbuf>, <tileInfo>, <queryPoints>, <pointIDs>, <options>, <callback>);`
+### `queryTile(<pbuf>, <tileInfo>, <queryPoints>, <pointIDs>, <options>, <callback>);`
 
 Parses a Vector Tile protobuf and queries a layer for a a number of fields based on a series of lng, lat points
 
@@ -20,11 +20,22 @@ Parses a Vector Tile protobuf and queries a layer for a a number of fields based
 
 #### Output
 
+Array (with one record per input `lng,lat`) of values:
+```
+[
+    {
+        id: <id>,
+        latlng: { lat: <lat>, lng: <lng> },
+        <field1>: <field1 value>,
+        <field2>: <field2 value>
+    },
+    ...
+]
+```
 
+### `loadTiles(<queryPoints>, <zoom>, <loadFunction>, <callback>)`
 
-### `vector-tile-query.loadTiles(<queryPoints>, <zoom>, <loadFunction>, <callback>)`
-
-Given a set of `lng,lat` points and a zoom level, finds what tiles to load, loads these tiles asyncronously (using a defined function), splits query `lng, lat`s out per tile, and assigns these a sequential ID (based on input order)
+Given a set of `lng,lat` points and a zoom level, finds what tiles to load, loads these tiles asynchronously (using a defined function), splits query `lng, lat`s out per tile, and assigns these a sequential ID (based on input order)
 
 #### Input
 
@@ -34,6 +45,7 @@ Given a set of `lng,lat` points and a zoom level, finds what tiles to load, load
 * `callback`: `function(err,data) {...}` to call upon completion
 
 #### Output
+Array of "tile objects" with tile zxy, query points within that tile, ids of these points, and vector tile pbufs.
 ```
 [
     {
@@ -46,6 +58,27 @@ Given a set of `lng,lat` points and a zoom level, finds what tiles to load, load
 ]
 ```
 
+### multiQuery(dataArr,options,callback)
 
+Given a set of "tile objects", asynchronously query (using `queryTile`) and return sorted values (based on input order / input point ids).
 
+#### Input
 
+* `dataArr`: `array` of "tileObjects" as described above - one for each tile that will be queried
+* `options`: `options` as described above in `queryTile`
+* `callback`: `function(err,data) {...}` to call upon completion
+
+### Output
+
+Array (with one record per input `lng,lat`) of values:
+```
+[
+    {
+        id: <id>,
+        latlng: { lat: <lat>, lng: <lng> },
+        <field1>: <field1 value>,
+        <field2>: <field2 value>
+    },
+    ...
+]
+```
