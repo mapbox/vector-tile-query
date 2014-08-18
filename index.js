@@ -71,7 +71,7 @@ function loadTiles(queryPoints, zoom, loadFunction, callback) {
 
 function queryTile(vt, tileInfo, queryPoints, pointIDs, options, callback) {
 
-    function buildResponse(id,point,fieldName,fieldValue) {
+    function buildResponse(id,point,fieldNames,fieldValue) {
         var respOutput = {
             id: id,
             latlng: {
@@ -79,18 +79,19 @@ function queryTile(vt, tileInfo, queryPoints, pointIDs, options, callback) {
                 lng: point[0]
             }
         };
-        respOutput[fieldName] = fieldValue;
+        for (var f=0; f<fieldNames.length; f++) {
+            respOutput[fieldNames[f]] = fieldValue[f];
+        }
         return respOutput;
     }
 
-    function query(queryPoints,layer,field, tolerance) {
+    function query(queryPoints,layer,fields, tolerance) {
         var outputData = [];
         data = vt.queryMany(queryPoints, {
             layer: layer,
             tolerance: tolerance
         });
 
-        if (data.features[0].attributes()[field] === undefined) return callback(new Error('Field "'+field+'" not found in tile'));
         for (var i = 0; i < Object.keys(data.hits).length; i++) {
             data.hits[i].sort(sortBy('distance'));
             var currentPoint = data.hits[i];
@@ -100,19 +101,35 @@ function queryTile(vt, tileInfo, queryPoints, pointIDs, options, callback) {
             var queryPointOutput;
 
             if (tileLength > 1 && topFeatureDistance !== 0) {
-                var distanceRatio = currentPoint[1].distance / (currentPoint[0].distance + currentPoint[1].distance);
-                var queryDifference = (allData[data.hits[i][0].feature_id].attributes()[field] - allData[data.hits[i][1].feature_id].attributes()[field]);
-                var calculateValue = allData[data.hits[i][1].feature_id].attributes()[field] + queryDifference * distanceRatio;
-                queryPointOutput = buildResponse(pointIDs[i],queryPoints[i],field,calculateValue);
+                var fieldValues = [];
+                for (var f=0; f<fields.length; f++) {
+                    var distanceRatio = currentPoint[1].distance / (currentPoint[0].distance + currentPoint[1].distance);
+                    var queryDifference = (allData[data.hits[i][0].feature_id].attributes()[fields[f]] - allData[data.hits[i][1].feature_id].attributes()[fields[f]]);
+                    var calculateValue = allData[data.hits[i][1].feature_id].attributes()[fields[f]] + queryDifference * distanceRatio;
+                    fieldValues.push(calculateValue);
+                }
+                queryPointOutput = buildResponse(pointIDs[i],queryPoints[i],fields,fieldValues);
 
             } else if (tileLength < 1) {
-                queryPointOutput = buildResponse(pointIDs[i],queryPoints[i],field,null);
+                var fieldValues = [];
+                for (var f=0; f<fields.length; f++) {
+                    fieldValues.push(null);
+                }
+                queryPointOutput = buildResponse(pointIDs[i],queryPoints[i],fields,fieldValues);
 
             } else if (tileLength === 1) {
-                queryPointOutput = buildResponse(pointIDs[i],queryPoints[i],field,allData[data.hits[i][0].feature_id].attributes()[field]);
+                var fieldValues = [];
+                for (var f=0; f<fields.length; f++) {
+                    fieldValues.push(allData[data.hits[i][0].feature_id].attributes()[fields[f]])
+                }
+                queryPointOutput = buildResponse(pointIDs[i],queryPoints[i],fields,fieldValues);
 
             } else if (topFeatureDistance === 0) {
-                queryPointOutput = buildResponse(pointIDs[i],queryPoints[i],field,allData[data.hits[i][tileLength - 1].feature_id].attributes()[field]);
+                var fieldValues = [];
+                for (var f=0; f<fields.length; f++) {
+                    fieldValues.push(allData[data.hits[i][tileLength - 1].feature_id].attributes()[fields[f]])
+                }
+                queryPointOutput = buildResponse(pointIDs[i],queryPoints[i],fields,fieldValues);
 
             }
             outputData.push(queryPointOutput);
@@ -122,16 +139,20 @@ function queryTile(vt, tileInfo, queryPoints, pointIDs, options, callback) {
 
     var data;
     var outputData = [];
-    var field = options.field || callback(new Error("No field specified"));
+    var fields = options.fields || callback(new Error("No fields specified"));
     var layer = options.layer || callback(new Error("No layer specified"))
     var tolerance = options.tolerance || 10;
 
     try {
-        outputData = query(queryPoints,layer,field, tolerance);
+        outputData = query(queryPoints,layer,fields, tolerance);
     } catch (err) {
         if (err == 'Error: Could not find layer in vector tile') {
             for (var i = 0; i < queryPoints.length; i++) {
-                queryPointOutput = buildResponse(pointIDs[i],queryPoints[i],field,null);
+                var fieldValues = [];
+                for (var f=0; f<fiels.length; f++) {
+                    fieldValues.push(null);
+                }
+                queryPointOutput = buildResponse(pointIDs[i],queryPoints[i],fields,fieldValues);
                 outputData.push(queryPointOutput);
             }
             return callback(null, outputData);
