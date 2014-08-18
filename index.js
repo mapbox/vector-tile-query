@@ -83,13 +83,8 @@ function queryTile(vt, tileInfo, queryPoints, pointIDs, options, callback) {
         return respOutput;
     }
 
-    var data;
-    var outputData = [];
-    var field = options.field || callback(new Error("No field specified"));
-    var layer = options.layer || callback(new Error("No layer specified"))
-    var tolerance = options.tolerance || 10;
-
-    try {
+    function query(queryPoints,layer,field, tolerance) {
+        var outputData = [];
         data = vt.queryMany(queryPoints, {
             layer: layer,
             tolerance: tolerance
@@ -122,7 +117,17 @@ function queryTile(vt, tileInfo, queryPoints, pointIDs, options, callback) {
             }
             outputData.push(queryPointOutput);
         }
+        return outputData;
+    }
 
+    var data;
+    var outputData = [];
+    var field = options.field || callback(new Error("No field specified"));
+    var layer = options.layer || callback(new Error("No layer specified"))
+    var tolerance = options.tolerance || 10;
+
+    try {
+        outputData = query(queryPoints,layer,field, tolerance);
     } catch (err) {
         if (err == 'Error: Could not find layer in vector tile') {
             for (var i = 0; i < queryPoints.length; i++) {
