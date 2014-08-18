@@ -1,29 +1,40 @@
 vector-tile-query
 ================
 
-vector-tile-query allows you to query vector tiles and return data.
+vector-tile-query allows you to query vector tiles and return data values from these tiles. This module consists of one main function, and two utility / helper functions.
 
-## Get Data:
-`queryVT(options, callback)`
+## `vector-tile-query.queryTile(<pbuf>, <tileInfo>, <queryPoints>, <pointIDs>, <options>, <callback>);`
 
-## Options:
+Parses a Vector Tile protobuf and queries a layer for a a number of fields based on a series of lng, lat points
 
-* `mapid`: Mapbox vector tile source. Example: `mapbox.mapbox-terrain-v1`
-* `layer`: layer within the tile source to query. Example: `contour`
-* `field`: The field within the layer to return data for. Example `ele`
-* `tolerance`: Tolerance within vector tile to query for point. Default: 1
-* `z`: What zoom level to pull data from.
-* `queryData`: array of lng lats. Seperated by a `;`. Example: `-122.464599609375,37.80123932755579;-122.46794700622559,37.80378247417763`
+### Input
 
-#### benchmarking
+* `pbuf`: vector tile (`pbuf`)
+* `tileInfo`: tile Z,X,Y ('tileinfo: {z:<z>,x:<x>,y:<y>}')
+* `queryPoints`: `array` of `lng, lat`s ([[lng,lat],[lng,lat]...])
+* `pointIDs`: `array` of point IDs that correspond to order of query `lng,lat`s (`[0,1,2...]`)
+* `options`: options for query:
+ * `layer`: layer within the tile source to query. Example: `contour`
+ * `fields`: `array` of fields within the layer to return data for. Example [`ele`]
+* `callback`: `function(err,data) {...}` to call upon completion of query
 
-Create variations of the algorithm in `variations/`.
+### Output
 
-```
-$ npm install
-$ node --prof bench/query.js
-$ npm install -g node-tick-processor
-$ node-tick-processor v8.log | less
-```
 
-(Alamere Falls Hike Query)
+
+## `vector-tile-query.loadTiles(<queryPoints>, <zoom>, <loadFunction>, <callback>)`
+
+Given a set of `lng,lat` points and a zoom level, finds what tiles to load, loads these tiles asyncronously (using a defined function), splits query `lng, lat`s out per tile, and assigns these a sequential ID (based on input order)
+
+### Input
+
+* `queryPoints`: `array` of `lng, lat`s ([[lng,lat],[lng,lat]...])
+* `zoom`: zoom level of tiles to query
+* `loadFunction`: function to load tiles / should return a `pbuf`
+* `callback`: `function(err,data) {...}` to call upon completion
+
+### Output
+
+
+
+
