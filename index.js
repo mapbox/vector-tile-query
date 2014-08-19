@@ -142,30 +142,24 @@ function queryTile(pbuf, tileInfo, queryPoints, pointIDs, options, callback) {
         callback(new Error('Field array empty'));
     }
 
-    var vt = new mapnik.VectorTile(tileInfo.z,tileInfo.x,tileInfo.y);
-    vt.setData(pbuf);
-    vt.parse(function(err) {
-        if (err) return callback(err,null);
-        try {
+    if (Object.keys(pbuf).length !== 0) {
+        var vt = new mapnik.VectorTile(tileInfo.z,tileInfo.x,tileInfo.y);
+        vt.setData(pbuf);
+        vt.parse(function(err) {
             outputData = query(vt, queryPoints,layer,fields, tolerance);
             return callback(null, outputData);
-        } catch (err) {
-            if (err == 'Error: Could not find layer in vector tile') {
-                for (var i = 0; i < queryPoints.length; i++) {
-                    var fieldValues = [];
-                    for (var f=0; f<fiels.length; f++) {
-                        fieldValues.push(null);
-                    }
-                    queryPointOutput = buildResponse(pointIDs[i],queryPoints[i],fields,fieldValues);
-                    outputData.push(queryPointOutput);
-                }
-                return callback(null, outputData);
-
-            } else {
-                return callback(err, null);
+        });
+    } else {
+        for (var i = 0; i < queryPoints.length; i++) {
+            var fieldValues = [];
+            for (var f=0; f<fields.length; f++) {
+                fieldValues.push(null);
             }
+            queryPointOutput = buildResponse(pointIDs[i],queryPoints[i],fields,fieldValues);
+            outputData.push(queryPointOutput);
         }
-    });
+        return callback(null, outputData);
+    }
 }
 
 function multiQuery(dataArr,options,callback) {
