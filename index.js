@@ -82,7 +82,7 @@ function queryTile(pbuf, tileInfo, queryPoints, pointIDs, options, callback) {
 
     function query(vt, queryPoints, layer, fields, tolerance) {
         var outputData = [];
-        data = vt.queryMany(queryPoints, {
+        var data = vt.queryMany(queryPoints, {
             layer: layer,
             tolerance: tolerance
         });
@@ -132,10 +132,20 @@ function queryTile(pbuf, tileInfo, queryPoints, pointIDs, options, callback) {
         return outputData;
     }
 
-    var data;
-    var outputData = [];
-    var fields = options.fields || callback(new Error('Field(s) not specified'));
-    var layer = options.layer || callback(new Error('No layer specified'));
+    var outputData;
+
+    if (options.fields) {
+        var fields = options.fields;
+    } else {
+        return callback(new Error('Field(s) not specified'));
+    }
+
+    if (options.layer) {
+        var layer = options.layer;
+    } else {
+        return callback(new Error('No layer specified'));
+    }
+
     var tolerance = options.tolerance || 10;
 
     if (fields && fields.length === 0) {
@@ -146,10 +156,12 @@ function queryTile(pbuf, tileInfo, queryPoints, pointIDs, options, callback) {
         var vt = new mapnik.VectorTile(tileInfo.z,tileInfo.x,tileInfo.y);
         vt.setData(pbuf);
         vt.parse(function(err) {
+            if (err) return callback(err);
             outputData = query(vt, queryPoints,layer,fields, tolerance);
             return callback(null, outputData);
         });
     } else {
+        outputData = [];
         for (var i = 0; i < queryPoints.length; i++) {
             var fieldValues = [];
             for (var f=0; f<fields.length; f++) {

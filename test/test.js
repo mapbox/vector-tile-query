@@ -86,7 +86,7 @@ describe('Tests for matching queries', function() {
 });
 
 describe('Test for invalid points', function() {
-    it('should not work for point queries', function(done) {
+    it('should not work for invalid points', function(done) {
         var queryPoints = [37.775718243274575,-122.4242377281189];
         vtileQuery.loadTiles(queryPoints,15,readTile, function (err,data) {
             assert.equal(err.message,"Invalid query points")
