@@ -98,9 +98,13 @@ function queryTile(pbuf, tileInfo, queryPoints, pointIDs, options, callback) {
             if (tileLength > 1 && topFeatureDistance !== 0) {
                 var fieldValues = [];
                 for (var f=0; f<fields.length; f++) {
-                    var distanceRatio = currentPoint[1].distance / (currentPoint[0].distance + currentPoint[1].distance);
-                    var queryDifference = (allData[data.hits[i][0].feature_id].attributes()[fields[f]] - allData[data.hits[i][1].feature_id].attributes()[fields[f]]);
-                    var calculateValue = allData[data.hits[i][1].feature_id].attributes()[fields[f]] + queryDifference * distanceRatio;
+                    if (typeof allData[data.hits[i][0].feature_id].attributes()[fields[f]] === 'string') {
+                        calculateValue = allData[data.hits[i][0].feature_id].attributes()[fields[f]];
+                    } else {
+                        var distanceRatio = currentPoint[1].distance / (currentPoint[0].distance + currentPoint[1].distance);
+                        var queryDifference = (allData[data.hits[i][0].feature_id].attributes()[fields[f]] - allData[data.hits[i][1].feature_id].attributes()[fields[f]]);
+                        var calculateValue = allData[data.hits[i][1].feature_id].attributes()[fields[f]] + queryDifference * distanceRatio;
+                    }
                     fieldValues.push(calculateValue);
                 }
                 queryPointOutput = buildResponse(pointIDs[i],queryPoints[i],fields,fieldValues);
