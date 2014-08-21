@@ -1,3 +1,4 @@
+![image](https://travis-ci.org/mapbox/vector-tile-query.svg?branch=master)
 vector-tile-query
 ================
 
