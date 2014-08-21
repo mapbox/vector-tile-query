@@ -94,3 +94,16 @@ describe('Test for invalid points', function() {
         });
     });
 });
+
+describe('Test for string queries', function() {
+    it('should not interpolate if the field is a string', function(done) {
+        var queryPoints = [[40.41970,-78.44625]];
+        var validResponse = '[{"id":0,"latlng":{"lat":40.4197,"lng":-78.44625},"class":"street"}]';
+        vtileQuery.loadTiles(queryPoints,14,readTile, function (err,data) {
+            vtileQuery.multiQuery(data, {tolerance:10,layer:'road',fields:['class']}, function(err, queryData) {
+                assert.equal(JSON.stringify(queryData),validResponse);
+                done();
+            });
+        });
+    });
+});
