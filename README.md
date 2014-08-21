@@ -1,4 +1,4 @@
-![image](https://travis-ci.org/mapbox/vector-tile-query.svg?branch=master)
+[![Build Status](https://travis-ci.org/mapbox/vector-tile-query.svg?branch=master)](https://travis-ci.org/mapbox/vector-tile-query)
 vector-tile-query
 ================
 
