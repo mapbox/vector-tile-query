@@ -1,31 +1,90 @@
 vector-tile-query
 ================
 
-vector-tile-query allows you to query vector tiles and return data.
+vector-tile-query allows you to query vector tiles and return data values from these tiles. This module consists of one main function, and two utility / helper functions.
 
-## Get Data:
-`queryVT(options, callback)`
+### `queryTile(<pbuf>, <tileInfo>, <queryPoints>, <pointIDs>, <options>, <callback>);`
 
-## Options:
+Parses a Vector Tile protobuf and queries a layer for a a number of fields based on a series of lat, lngs points
 
-* `mapid`: Mapbox vector tile source. Example: `mapbox.mapbox-terrain-v1`
-* `layer`: layer within the tile source to query. Example: `contour`
-* `attribute`: The attribute within the layer to return data for. Example `ele`
-* `skipVal`: The number of values to skip along a long. Higher values interpolates more features and makes the query faster.  The Default is set 1 or no skipping.
-* `tolerance`: Tolerance within vector tile to query for point. Default: 1
-* `maximum`: Maximum number of points to query. Default: 350.
-* `z`: What zoom level to pull data from. Default: 14.
-* `queryData`: array of lng lats. Seperated by a `;`. Example: `-122.464599609375,37.80123932755579;-122.46794700622559,37.80378247417763`
+#### Input
 
-#### benchmarking
+* `pbuf`: vector tile (`pbuf`)
+* `tileInfo`: tile Z,X,Y ('tileinfo: {z:<z>,x:<x>,y:<y>}')
+* `queryPoints`: `array` of `lat, lngs`s (`[[lat,lng],[lat,lng]...]`)
+* `pointIDs`: `array` of point IDs that correspond to order of query `lat,lng`s (`[0,1,2...]`)
+* `options`: options for query:
+ * `layer`: layer within the tile source to query. Example: `contour`
+ * `fields`: `array` of fields within the layer to return data for. Example [`ele`]
+* `callback`: `function(err,data) {...}` to call upon completion of query
 
-Create variations of the algorithm in `variations/`.
+#### Output
 
+Array (with one record per input `lat,lng`) of values:
 ```
-$ npm install
-$ node --prof bench/query.js
-$ npm install -g node-tick-processor
-$ node-tick-processor v8.log | less
+[
+    {
+        id: <id>,
+        latlng: { lat: <lat>, lng: <lng> },
+        <field1>: <field1 value>,
+        <field2>: <field2 value>
+    },
+    ...
+]
 ```
 
-(Alamere Falls Hike Query)
+### `loadTiles(<queryPoints>, <zoom>, <loadFunction>, <callback>)`
+
+Given a set of `lat,lng` points and a zoom level, finds what tiles to load, loads these tiles asynchronously (using a defined function), splits query `lat, lngs`s out per tile, and assigns these a sequential ID (based on input order)
+
+#### Input
+
+* `queryPoints`: `array` of `lat, lngs`s (`[[lat,lng],[lat,lng]...]`)
+* `zoom`: zoom level of tiles to query
+* `loadFunction`: function to load tiles / should return a `pbuf`
+* `callback`: `function(err,data) {...}` to call upon completion
+
+#### Output
+Array of "tile objects" with tile zxy, query points within that tile, ids of these points, and vector tile pbufs.
+```
+[
+    {
+        zxy: { z: <z>, x: <x>, y: <y> },
+        points: [ [lat,lng], [lat,lng], ... ],
+        pointIDs: [ 0, 1, ... ],
+        data: <vtile pbuf>
+    } 
+...
+]
+```
+
+### multiQuery(dataArr,options,callback)
+
+Helper function to asynchronously query (using `queryTile` (given a set of "tile objects") and return sorted values (based on input order / input point ids).
+
+#### Input
+
+* `dataArr`: `array` of "tileObjects" as described above - one record for each tile that will be queried
+* `options`: `options` as described above in `queryTile`
+* `callback`: `function(err,data) {...}` to call upon completion
+
+#### Output
+
+Array (with one record per input `lat,lng`) of values:
+```
+[
+    {
+        id: <id>,
+        latlng: { lat: <lat>, lng: <lng> },
+        <field1>: <field1 value>,
+        <field2>: <field2 value>
+    },
+    ...
+]
+```
+
+### Usage
+```
+git clone https://github.com/mapbox/vector-tile-query.git
+npm install
+```
