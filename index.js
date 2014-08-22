@@ -98,7 +98,7 @@ function queryTile(pbuf, tileInfo, queryPoints, pointIDs, options, callback) {
             if (tileLength > 1 && topFeatureDistance !== 0) {
                 var fieldValues = [];
                 for (var f=0; f<fields.length; f++) {
-                    if (typeof allData[data.hits[i][0].feature_id].attributes()[fields[f]] === 'string') {
+                    if (isNaN(allData[data.hits[i][0].feature_id].attributes()[fields[f]])) {
                         calculateValue = allData[data.hits[i][0].feature_id].attributes()[fields[f]];
                     } else {
                         var distanceRatio = currentPoint[1].distance / (currentPoint[0].distance + currentPoint[1].distance);
