@@ -5,7 +5,7 @@ var vtileQuery = require('../');
 function readTile(tile,callback) {
     var tilepath = 'test/fixtures/tiles/'+tile.z+'/'+tile.x+'/'+tile.y+'.vector.pbf';
     fs.readFile(tilepath, function(err,data) {
-        if (err) return callback(err)   
+        if (err) return callback(err)
         return callback(null,data);
     });
 }
@@ -16,7 +16,7 @@ describe('Load relevant tiles from list of coords', function() {
         vtileQuery.loadTiles(queryCoords,14,readTile, function (err,data) {
             assert.equal(err.message,"Tile not loaded")
             done();
-        });   
+        });
     });
 });
 

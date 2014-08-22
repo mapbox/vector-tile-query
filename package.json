@@ -23,7 +23,7 @@
   },
   "main": "./index",
   "dependencies": {
-    "mapnik": "1.4.12",
+    "mapnik": "https://github.com/mapnik/node-mapnik/tarball/queryMany-smaller-return",
     "queue-async": "1.0.7",
     "sphericalmercator": "~1.0.2"
   },
