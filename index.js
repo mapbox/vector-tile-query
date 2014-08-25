@@ -180,13 +180,6 @@ function queryTile(pbuf, tileInfo, queryPoints, pointIDs, options, callback) {
 
 function multiQuery(dataArr,options,callback) {
 
-    function queryEach(data, callback) {
-        queryTile(data.data, data.zxy, data.points, data.pointIDs, options, function(err, queryData) {
-            if (err) return callback(err);
-            return callback(null, queryData);
-        });
-    }
-
     function queriesDone(err, queries) {
         if (err) return callback(err);
         var dataOutput = [];
@@ -198,7 +191,7 @@ function multiQuery(dataArr,options,callback) {
     var queryQueue = new async();
 
     for (var i = 0; i<dataArr.length; i++) {
-        queryQueue.defer(queryEach, dataArr[i]);
+        queryQueue.defer(queryTile, dataArr[i].data, dataArr[i].zxy, dataArr[i].points, dataArr[i].pointIDs, options);
     }
 
     queryQueue.awaitAll(queriesDone);
