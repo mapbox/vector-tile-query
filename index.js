@@ -24,7 +24,7 @@ function loadTiles(queryPoints, zoom, loadFunction, callback) {
     }
 
     function buildQuery(points, zoom) {
-        var queryObject = {};
+        var queryObject = {}, output = [];
         for (var i = 0; i < points.length; i++) {
             var xyz = sm.xyz([points[i][1], points[i][0], points[i][1], points[i][0]], zoom);
             var tileName = zoom + '/' + xyz.minX + '/' + xyz.minY;
@@ -39,20 +39,20 @@ function loadTiles(queryPoints, zoom, loadFunction, callback) {
                         [points[i][1], points[i][0]]
                     ],
                     pointIDs: [i]
-
                 };
+                output.push(queryObject[tileName]);
             } else {
                 queryObject[tileName].points.push([points[i][1], points[i][0]]);
                 queryObject[tileName].pointIDs.push(i);
             }
         }
-        return queryObject;
+        return output;
     }
 
     var tilePoints = buildQuery(queryPoints,zoom);
     var loadQueue = new async();
 
-    for (var i in tilePoints) {
+    for (var i = 0; i < tilePoints.length; i++) {
         loadQueue.defer(loadTileAsync,tilePoints[i],loadFunction);
     }
 
