@@ -56,10 +56,7 @@ function loadTiles(queryPoints, zoom, loadFunction, callback) {
         loadQueue.defer(loadTileAsync,tilePoints[i],loadFunction);
     }
 
-    loadQueue.awaitAll(function(err, tileObj) {
-        if (err) return callback(err, null);
-        return callback(null,tileObj);
-    });
+    loadQueue.awaitAll(callback);
 }
 
 function queryTile(pbuf, tileInfo, queryPoints, pointIDs, options, callback) {
@@ -87,11 +84,9 @@ function queryTile(pbuf, tileInfo, queryPoints, pointIDs, options, callback) {
 
         for (var i = 0; i < Object.keys(data.hits).length; i++) {
             data.hits[i].sort(sortBy('distance'));
-            var tileLength = data.hits[i].length;
-            var topFeatureDistance = data.hits[i][tileLength - 1].distance;
             var fieldValues;
 
-            if (tileLength > 1 && topFeatureDistance !== 0) {
+            if (data.hits[i].length > 1 && data.hits[i][data.hits[i].length - 1].distance !== 0) {
                 fieldValues = fields.map(function(field) {
                     if (isNaN(data.features[data.hits[i][0].feature_id].attributes()[field])) {
                         return data.features[data.hits[i][0].feature_id].attributes()[field];
@@ -102,19 +97,19 @@ function queryTile(pbuf, tileInfo, queryPoints, pointIDs, options, callback) {
                     }
                 });
 
-            } else if (tileLength < 1) {
+            } else if (data.hits[i].length < 1) {
                 fieldValues = fields.map(function() {
                     return null;
                 });
 
-            } else if (tileLength === 1) {
+            } else if (data.hits[i].length === 1) {
                 fieldValues = fields.map(function(field) {
                     return data.features[data.hits[i][0].feature_id].attributes()[field];
                 });
 
-            } else if (topFeatureDistance === 0) {
+            } else if (data.hits[i][data.hits[i].length - 1].distance === 0) {
                 fieldValues = fields.map(function(field) {
-                    return data.features[data.hits[i][tileLength - 1].feature_id].attributes()[field];
+                    return data.features[data.hits[i][data.hits[i].length - 1].feature_id].attributes()[field];
                 });
             }
 
