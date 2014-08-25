@@ -13,7 +13,7 @@ function sortBy(sortField) {
 
 function loadTiles(queryPoints, zoom, loadFunction, callback) {
 
-    if (!queryPoints[0].length) return callback(new Error("Invalid query points"));
+    if (!queryPoints[0].length) return callback(new Error('Invalid query points'));
 
     function loadTileAsync(tileObj, loadFunction, callback) {
         loadFunction(tileObj.zxy, function(err, data) {
@@ -21,11 +21,6 @@ function loadTiles(queryPoints, zoom, loadFunction, callback) {
             tileObj.data = data;
             return callback(null, tileObj);
         });
-    }
-
-    function loadDone(err, tileObj) {
-        if (err) return callback(err, null);
-        return callback(null,tileObj);
     }
 
     function buildQuery(points, zoom) {
@@ -61,12 +56,15 @@ function loadTiles(queryPoints, zoom, loadFunction, callback) {
         loadQueue.defer(loadTileAsync,tilePoints[i],loadFunction);
     }
 
-    loadQueue.awaitAll(loadDone);
+    loadQueue.awaitAll(function(err, tileObj) {
+        if (err) return callback(err, null);
+        return callback(null,tileObj);
+    });
 }
 
 function queryTile(pbuf, tileInfo, queryPoints, pointIDs, options, callback) {
 
-    function buildResponse(id,point,fieldNames,fieldValue) {
+    function buildResponse(id,point,fieldNames,fieldValues) {
         var respOutput = {
             id: id,
             latlng: {
@@ -75,7 +73,7 @@ function queryTile(pbuf, tileInfo, queryPoints, pointIDs, options, callback) {
             }
         };
         for (var f=0; f<fieldNames.length; f++) {
-            respOutput[fieldNames[f]] = fieldValue[f];
+            respOutput[fieldNames[f]] = fieldValues[f];
         }
         return respOutput;
     }
@@ -89,57 +87,48 @@ function queryTile(pbuf, tileInfo, queryPoints, pointIDs, options, callback) {
 
         for (var i = 0; i < Object.keys(data.hits).length; i++) {
             data.hits[i].sort(sortBy('distance'));
-            var currentPoint = data.hits[i];
-            var allData = data.features;
-            var tileLength = currentPoint.length;
-            var topFeatureDistance = currentPoint[tileLength - 1].distance;
-            var queryPointOutput;
+            var tileLength = data.hits[i].length;
+            var topFeatureDistance = data.hits[i][tileLength - 1].distance;
+            var fieldValues;
 
             if (tileLength > 1 && topFeatureDistance !== 0) {
-                var fieldValues = [];
-                for (var f=0; f<fields.length; f++) {
-                    if (isNaN(allData[data.hits[i][0].feature_id].attributes()[fields[f]])) {
-                        calculateValue = allData[data.hits[i][0].feature_id].attributes()[fields[f]];
+                fieldValues = fields.map(function(field) {
+                    if (isNaN(data.features[data.hits[i][0].feature_id].attributes()[field])) {
+                        return data.features[data.hits[i][0].feature_id].attributes()[field];
                     } else {
-                        var distanceRatio = currentPoint[1].distance / (currentPoint[0].distance + currentPoint[1].distance);
-                        var queryDifference = (allData[data.hits[i][0].feature_id].attributes()[fields[f]] - allData[data.hits[i][1].feature_id].attributes()[fields[f]]);
-                        var calculateValue = allData[data.hits[i][1].feature_id].attributes()[fields[f]] + queryDifference * distanceRatio;
+                        var distanceRatio = data.hits[i][1].distance / (data.hits[i][0].distance + data.hits[i][1].distance);
+                        var queryDifference = (data.features[data.hits[i][0].feature_id].attributes()[field] - data.features[data.hits[i][1].feature_id].attributes()[field]);
+                        return data.features[data.hits[i][1].feature_id].attributes()[field] + queryDifference * distanceRatio;
                     }
-                    fieldValues.push(calculateValue);
-                }
-                queryPointOutput = buildResponse(pointIDs[i],queryPoints[i],fields,fieldValues);
+                });
 
             } else if (tileLength < 1) {
-                var fieldValues = [];
-                for (var f=0; f<fields.length; f++) {
-                    fieldValues.push(null);
-                }
-                queryPointOutput = buildResponse(pointIDs[i],queryPoints[i],fields,fieldValues);
+                fieldValues = fields.map(function() {
+                    return null;
+                });
 
             } else if (tileLength === 1) {
-                var fieldValues = [];
-                for (var f=0; f<fields.length; f++) {
-                    fieldValues.push(allData[data.hits[i][0].feature_id].attributes()[fields[f]])
-                }
-                queryPointOutput = buildResponse(pointIDs[i],queryPoints[i],fields,fieldValues);
+                fieldValues = fields.map(function(field) {
+                    return data.features[data.hits[i][0].feature_id].attributes()[field];
+                });
 
             } else if (topFeatureDistance === 0) {
-                var fieldValues = [];
-                for (var f=0; f<fields.length; f++) {
-                    fieldValues.push(allData[data.hits[i][tileLength - 1].feature_id].attributes()[fields[f]])
-                }
-                queryPointOutput = buildResponse(pointIDs[i],queryPoints[i],fields,fieldValues);
-
+                fieldValues = fields.map(function(field) {
+                    return data.features[data.hits[i][tileLength - 1].feature_id].attributes()[field];
+                });
             }
-            outputData.push(queryPointOutput);
+
+            outputData.push(buildResponse(pointIDs[i],queryPoints[i],fields,fieldValues));
         }
         return outputData;
     }
 
     var outputData;
+    var fields;
+    var tolerance = options.tolerance || 10;
 
     if (options.fields) {
-        var fields = options.fields;
+        fields = options.fields;
     } else {
         return callback(new Error('Field(s) not specified'));
     }
@@ -149,8 +138,6 @@ function queryTile(pbuf, tileInfo, queryPoints, pointIDs, options, callback) {
     } else {
         return callback(new Error('No layer specified'));
     }
-
-    var tolerance = options.tolerance || 10;
 
     if (fields && fields.length === 0) {
         callback(new Error('Field array empty'));
@@ -167,12 +154,11 @@ function queryTile(pbuf, tileInfo, queryPoints, pointIDs, options, callback) {
     } else {
         outputData = [];
         for (var i = 0; i < queryPoints.length; i++) {
-            var fieldValues = [];
-            for (var f=0; f<fields.length; f++) {
-                fieldValues.push(null);
-            }
-            queryPointOutput = buildResponse(pointIDs[i],queryPoints[i],fields,fieldValues);
-            outputData.push(queryPointOutput);
+            var fieldValues = fields.map(function() {
+                return null;
+            });
+
+            outputData.push(buildResponse(pointIDs[i],queryPoints[i],fields,fieldValues));
         }
         return callback(null, outputData);
     }
