@@ -2,6 +2,7 @@ var mapnik = require('mapnik');
 var sphericalmercator = require('sphericalmercator');
 var sm = new sphericalmercator();
 var async = require('queue-async');
+var _ = require('lodash');
 
 function sortBy(sortField) {
     return function sortCallback(a, b) {
@@ -61,62 +62,51 @@ function loadTiles(queryPoints, zoom, loadFunction, callback) {
 
 function queryTile(pbuf, tileInfo, queryPoints, pointIDs, options, callback) {
 
-    function buildResponse(id,point,fieldNames,fieldValues) {
-        var respOutput = {
-            id: id,
-            latlng: {
-                lat: point[1],
-                lng: point[0]
-            }
-        };
-        for (var f=0; f<fieldNames.length; f++) {
-            respOutput[fieldNames[f]] = fieldValues[f];
-        }
-        return respOutput;
-    }
-
     function createNulls() {
         return null;
     }
 
     function query(vt, queryPoints, layer, fields, tolerance) {
-        var outputData = [];
         var data = vt.queryMany(queryPoints, {
             layer: layer,
             tolerance: tolerance
         });
-        for (var i = 0; i < Object.keys(data.hits).length; i++) {
-            data.hits[i].sort(sortBy('distance'));
-            var fieldValues;
-
-            if (data.hits[i].length > 1 && data.hits[i][data.hits[i].length - 1].distance !== 0) {
-                fieldValues = fields.map(function(field) {
-                    if (isNaN(data.features[data.hits[i][0].feature_id].attributes()[field])) {
-                        return data.features[data.hits[i][0].feature_id].attributes()[field];
+        return _.values(data.hits).map(function(hit, i) {
+            hit.sort(sortBy('distance'));
+            if (hit.length > 1 && hit[hit.length - 1].distance !== 0) {
+                return fields.map(function(field) {
+                    if (isNaN(data.features[hit[0].feature_id].attributes()[field])) {
+                        return data.features[hit[0].feature_id].attributes()[field];
                     } else {
-                        var distanceRatio = data.hits[i][1].distance / (data.hits[i][0].distance + data.hits[i][1].distance);
-                        var queryDifference = (data.features[data.hits[i][0].feature_id].attributes()[field] - data.features[data.hits[i][1].feature_id].attributes()[field]);
-                        return data.features[data.hits[i][1].feature_id].attributes()[field] + queryDifference * distanceRatio;
+                        var distanceRatio = hit[1].distance / (hit[0].distance + hit[1].distance);
+                        var queryDifference = (data.features[hit[0].feature_id].attributes()[field] - data.features[hit[1].feature_id].attributes()[field]);
+                        return data.features[hit[1].feature_id].attributes()[field] + queryDifference * distanceRatio;
                     }
                 });
-
-            } else if (data.hits[i].length < 1) {
-                fieldValues = fieldValues = fields.map(createNulls);
-
-            } else if (data.hits[i].length === 1) {
-                fieldValues = fields.map(function(field) {
-                    return data.features[data.hits[i][0].feature_id].attributes()[field];
+            } else if (hit.length < 1) {
+                return fields.map(createNulls);
+            } else if (hit.length === 1) {
+                return fields.map(function(field) {
+                    return data.features[hit[0].feature_id].attributes()[field];
                 });
-
-            } else if (data.hits[i][data.hits[i].length - 1].distance === 0) {
-                fieldValues = fields.map(function(field) {
-                    return data.features[data.hits[i][data.hits[i].length - 1].feature_id].attributes()[field];
+            } else if (hit[hit.length - 1].distance === 0) {
+                return fields.map(function(field) {
+                    return data.features[hit[hit.length - 1].feature_id].attributes()[field];
                 });
             }
-
-            outputData.push(buildResponse(pointIDs[i],queryPoints[i],fields,fieldValues));
-        }
-        return outputData;
+        }).map(function(fieldValues, i) {
+            var output = {
+                id: pointIDs[i],
+                latlng: {
+                    lat: queryPoints[i][1],
+                    lng: queryPoints[i][0]
+                }
+            };
+            for (var f=0; f<fields.length; f++) {
+                output[fields[f]] = fieldValues[f];
+            }
+            return output;
+        });
     }
 
     var outputData;
