@@ -71,7 +71,7 @@ function queryTile(pbuf, tileInfo, queryPoints, pointIDs, options, callback) {
             layer: layer,
             tolerance: tolerance
         });
-        return _.values(data.hits).map(function(hit, i) {
+        return _.values(data.hits).map(function(hit) {
             hit.sort(sortBy('distance'));
             if (hit.length > 1 && hit[hit.length - 1].distance !== 0) {
                 return fields.map(function(field) {
@@ -140,9 +140,17 @@ function queryTile(pbuf, tileInfo, queryPoints, pointIDs, options, callback) {
     } else {
         outputData = [];
         for (var i = 0; i < queryPoints.length; i++) {
-            var fieldValues = fields.map(createNulls);
-
-            outputData.push(buildResponse(pointIDs[i],queryPoints[i],fields,fieldValues));
+            var output = {
+                id: pointIDs[i],
+                latlng: {
+                    lat: queryPoints[i][1],
+                    lng: queryPoints[i][0]
+                }
+            };
+            for (var f=0; f<fields.length; f++) {
+                output[fields[f]] = null;
+            }
+            outputData.push(output);
         }
         return callback(null, outputData);
     }
