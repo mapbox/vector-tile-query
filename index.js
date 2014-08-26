@@ -2,6 +2,7 @@ var mapnik = require('mapnik');
 var sphericalmercator = require('sphericalmercator');
 var sm = new sphericalmercator();
 var async = require('queue-async');
+var _ = require('lodash');
 
 function sortBy(sortField) {
     return function sortCallback(a, b) {
@@ -13,7 +14,7 @@ function sortBy(sortField) {
 
 function loadTiles(queryPoints, zoom, loadFunction, callback) {
 
-    if (!queryPoints[0].length) return callback(new Error("Invalid query points"));
+    if (!queryPoints[0].length) return callback(new Error('Invalid query points'));
 
     function loadTileAsync(tileObj, loadFunction, callback) {
         loadFunction(tileObj.zxy, function(err, data) {
@@ -23,13 +24,8 @@ function loadTiles(queryPoints, zoom, loadFunction, callback) {
         });
     }
 
-    function loadDone(err, tileObj) {
-        if (err) return callback(err, null);
-        return callback(null,tileObj);
-    }
-
     function buildQuery(points, zoom) {
-        var queryObject = {};
+        var queryObject = {}, output = [];
         for (var i = 0; i < points.length; i++) {
             var xyz = sm.xyz([points[i][1], points[i][0], points[i][1], points[i][0]], zoom);
             var tileName = zoom + '/' + xyz.minX + '/' + xyz.minY;
@@ -44,102 +40,81 @@ function loadTiles(queryPoints, zoom, loadFunction, callback) {
                         [points[i][1], points[i][0]]
                     ],
                     pointIDs: [i]
-
                 };
+                output.push(queryObject[tileName]);
             } else {
                 queryObject[tileName].points.push([points[i][1], points[i][0]]);
                 queryObject[tileName].pointIDs.push(i);
             }
         }
-        return queryObject;
+        return output;
     }
 
     var tilePoints = buildQuery(queryPoints,zoom);
     var loadQueue = new async();
 
-    for (var i in tilePoints) {
+    for (var i = 0; i < tilePoints.length; i++) {
         loadQueue.defer(loadTileAsync,tilePoints[i],loadFunction);
     }
 
-    loadQueue.awaitAll(loadDone);
+    loadQueue.awaitAll(callback);
 }
 
 function queryTile(pbuf, tileInfo, queryPoints, pointIDs, options, callback) {
 
-    function buildResponse(id,point,fieldNames,fieldValue) {
-        var respOutput = {
-            id: id,
-            latlng: {
-                lat: point[1],
-                lng: point[0]
-            }
-        };
-        for (var f=0; f<fieldNames.length; f++) {
-            respOutput[fieldNames[f]] = fieldValue[f];
-        }
-        return respOutput;
+    function createNulls() {
+        return null;
     }
 
     function query(vt, queryPoints, layer, fields, tolerance) {
-        var outputData = [];
         var data = vt.queryMany(queryPoints, {
             layer: layer,
             tolerance: tolerance
         });
-
-        for (var i = 0; i < Object.keys(data.hits).length; i++) {
-            data.hits[i].sort(sortBy('distance'));
-            var currentPoint = data.hits[i];
-            var allData = data.features;
-            var tileLength = currentPoint.length;
-            var topFeatureDistance = currentPoint[tileLength - 1].distance;
-            var queryPointOutput;
-
-            if (tileLength > 1 && topFeatureDistance !== 0) {
-                var fieldValues = [];
-                for (var f=0; f<fields.length; f++) {
-                    if (isNaN(allData[data.hits[i][0].feature_id].attributes()[fields[f]])) {
-                        calculateValue = allData[data.hits[i][0].feature_id].attributes()[fields[f]];
+        return _.values(data.hits).map(function(hit) {
+            hit.sort(sortBy('distance'));
+            if (hit.length > 1 && hit[hit.length - 1].distance !== 0) {
+                return fields.map(function(field) {
+                    if (isNaN(data.features[hit[0].feature_id].attributes()[field])) {
+                        return data.features[hit[0].feature_id].attributes()[field];
                     } else {
-                        var distanceRatio = currentPoint[1].distance / (currentPoint[0].distance + currentPoint[1].distance);
-                        var queryDifference = (allData[data.hits[i][0].feature_id].attributes()[fields[f]] - allData[data.hits[i][1].feature_id].attributes()[fields[f]]);
-                        var calculateValue = allData[data.hits[i][1].feature_id].attributes()[fields[f]] + queryDifference * distanceRatio;
+                        var distanceRatio = hit[1].distance / (hit[0].distance + hit[1].distance);
+                        var queryDifference = (data.features[hit[0].feature_id].attributes()[field] - data.features[hit[1].feature_id].attributes()[field]);
+                        return data.features[hit[1].feature_id].attributes()[field] + queryDifference * distanceRatio;
                     }
-                    fieldValues.push(calculateValue);
-                }
-                queryPointOutput = buildResponse(pointIDs[i],queryPoints[i],fields,fieldValues);
-
-            } else if (tileLength < 1) {
-                var fieldValues = [];
-                for (var f=0; f<fields.length; f++) {
-                    fieldValues.push(null);
-                }
-                queryPointOutput = buildResponse(pointIDs[i],queryPoints[i],fields,fieldValues);
-
-            } else if (tileLength === 1) {
-                var fieldValues = [];
-                for (var f=0; f<fields.length; f++) {
-                    fieldValues.push(allData[data.hits[i][0].feature_id].attributes()[fields[f]])
-                }
-                queryPointOutput = buildResponse(pointIDs[i],queryPoints[i],fields,fieldValues);
-
-            } else if (topFeatureDistance === 0) {
-                var fieldValues = [];
-                for (var f=0; f<fields.length; f++) {
-                    fieldValues.push(allData[data.hits[i][tileLength - 1].feature_id].attributes()[fields[f]])
-                }
-                queryPointOutput = buildResponse(pointIDs[i],queryPoints[i],fields,fieldValues);
-
+                });
+            } else if (hit.length < 1) {
+                return fields.map(createNulls);
+            } else if (hit.length === 1) {
+                return fields.map(function(field) {
+                    return data.features[hit[0].feature_id].attributes()[field];
+                });
+            } else if (hit[hit.length - 1].distance === 0) {
+                return fields.map(function(field) {
+                    return data.features[hit[hit.length - 1].feature_id].attributes()[field];
+                });
             }
-            outputData.push(queryPointOutput);
-        }
-        return outputData;
+        }).map(function(fieldValues, i) {
+            var output = {
+                id: pointIDs[i],
+                latlng: {
+                    lat: queryPoints[i][1],
+                    lng: queryPoints[i][0]
+                }
+            };
+            for (var f=0; f<fields.length; f++) {
+                output[fields[f]] = fieldValues[f];
+            }
+            return output;
+        });
     }
 
     var outputData;
+    var fields;
+    var tolerance = options.tolerance || 10;
 
     if (options.fields) {
-        var fields = options.fields;
+        fields = options.fields;
     } else {
         return callback(new Error('Field(s) not specified'));
     }
@@ -149,8 +124,6 @@ function queryTile(pbuf, tileInfo, queryPoints, pointIDs, options, callback) {
     } else {
         return callback(new Error('No layer specified'));
     }
-
-    var tolerance = options.tolerance || 10;
 
     if (fields && fields.length === 0) {
         callback(new Error('Field array empty'));
@@ -167,25 +140,23 @@ function queryTile(pbuf, tileInfo, queryPoints, pointIDs, options, callback) {
     } else {
         outputData = [];
         for (var i = 0; i < queryPoints.length; i++) {
-            var fieldValues = [];
+            var output = {
+                id: pointIDs[i],
+                latlng: {
+                    lat: queryPoints[i][1],
+                    lng: queryPoints[i][0]
+                }
+            };
             for (var f=0; f<fields.length; f++) {
-                fieldValues.push(null);
+                output[fields[f]] = null;
             }
-            queryPointOutput = buildResponse(pointIDs[i],queryPoints[i],fields,fieldValues);
-            outputData.push(queryPointOutput);
+            outputData.push(output);
         }
         return callback(null, outputData);
     }
 }
 
 function multiQuery(dataArr,options,callback) {
-
-    function queryEach(data, callback) {
-        queryTile(data.data, data.zxy, data.points, data.pointIDs, options, function(err, queryData) {
-            if (err) return callback(err);
-            return callback(null, queryData);
-        });
-    }
 
     function queriesDone(err, queries) {
         if (err) return callback(err);
@@ -198,7 +169,7 @@ function multiQuery(dataArr,options,callback) {
     var queryQueue = new async();
 
     for (var i = 0; i<dataArr.length; i++) {
-        queryQueue.defer(queryEach, dataArr[i]);
+        queryQueue.defer(queryTile, dataArr[i].data, dataArr[i].zxy, dataArr[i].points, dataArr[i].pointIDs, options);
     }
 
     queryQueue.awaitAll(queriesDone);

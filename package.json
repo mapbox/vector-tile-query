@@ -25,14 +25,14 @@
   "dependencies": {
     "mapnik": "1.4.12",
     "queue-async": "1.0.7",
-    "sphericalmercator": "~1.0.2"
+    "sphericalmercator": "~1.0.2",
+    "lodash": "~2.4.1"
   },
   "devDependencies": {
     "mocha": "1.17.x",
     "benchmark": "~1.0.0"
   },
   "scripts": {
-    "pretest": "npm install mocha",
     "test": "mocha"
   }
 }
