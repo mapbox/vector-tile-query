@@ -119,3 +119,15 @@ describe('Test for string queries', function() {
         });
     });
 });
+
+describe('Test for invalid data', function() {
+    it('return nulls from an empty protobuf', function(done) {
+        var queryPoints = [[40.41970,-78.44625]];
+        var pointIDs = [1,2];
+        var validResponse = '[{"id":1,"latlng":{"lat":-78.44625,"lng":40.4197},"class":null}]';
+        vtileQuery.queryTile({}, { z: 14, x: 4621, y: 6177 }, queryPoints, pointIDs, {layer:'road',fields:['class']}, function (err, queryData) {
+            assert.equal(JSON.stringify(queryData),validResponse);
+            done();
+        })
+    });
+});

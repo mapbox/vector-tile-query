@@ -75,13 +75,16 @@ function queryTile(pbuf, tileInfo, queryPoints, pointIDs, options, callback) {
         return respOutput;
     }
 
+    function createNulls() {
+        return null;
+    }
+
     function query(vt, queryPoints, layer, fields, tolerance) {
         var outputData = [];
         var data = vt.queryMany(queryPoints, {
             layer: layer,
             tolerance: tolerance
         });
-
         for (var i = 0; i < Object.keys(data.hits).length; i++) {
             data.hits[i].sort(sortBy('distance'));
             var fieldValues;
@@ -98,9 +101,7 @@ function queryTile(pbuf, tileInfo, queryPoints, pointIDs, options, callback) {
                 });
 
             } else if (data.hits[i].length < 1) {
-                fieldValues = fields.map(function() {
-                    return null;
-                });
+                fieldValues = fieldValues = fields.map(createNulls);
 
             } else if (data.hits[i].length === 1) {
                 fieldValues = fields.map(function(field) {
@@ -149,9 +150,7 @@ function queryTile(pbuf, tileInfo, queryPoints, pointIDs, options, callback) {
     } else {
         outputData = [];
         for (var i = 0; i < queryPoints.length; i++) {
-            var fieldValues = fields.map(function() {
-                return null;
-            });
+            var fieldValues = fields.map(createNulls);
 
             outputData.push(buildResponse(pointIDs[i],queryPoints[i],fields,fieldValues));
         }
