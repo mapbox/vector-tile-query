@@ -73,7 +73,7 @@ function queryTile(pbuf, tileInfo, queryPoints, pointIDs, options, callback) {
         });
         return _.values(data.hits).map(function(hit) {
             hit.sort(sortBy('distance'));
-            if (hit.length > 1 && hit[hit.length - 1].distance !== 0) {
+            if (hit.length > 1 && hit[hit.length - 1].distance !== 0 && interpolate === true) {
                 return fields.map(function(field) {
                     if (isNaN(data.features[hit[0].feature_id].attributes()[field])) {
                         return data.features[hit[0].feature_id].attributes()[field];
@@ -85,7 +85,7 @@ function queryTile(pbuf, tileInfo, queryPoints, pointIDs, options, callback) {
                 });
             } else if (hit.length < 1) {
                 return fields.map(createNulls);
-            } else if (hit.length === 1) {
+            } else if (hit.length === 1 || interpolate === false) {
                 return fields.map(function(field) {
                     return data.features[hit[0].feature_id].attributes()[field];
                 });
@@ -112,6 +112,7 @@ function queryTile(pbuf, tileInfo, queryPoints, pointIDs, options, callback) {
     var outputData;
     var fields;
     var tolerance = options.tolerance || 10;
+    var interpolate = options.interpolate !== undefined ? options.interpolate : true;
 
     if (options.fields) {
         fields = options.fields;

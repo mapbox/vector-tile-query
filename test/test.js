@@ -73,11 +73,23 @@ describe('Tests for matching queries', function() {
             });
         });
     });
+
     it('multiple field query should match', function(done) {
         var queryPoints = [[37.934205, -122.747147], [37.934721, -122.747461]];
         var validResponse = '[{"id":0,"latlng":{"lat":37.934205,"lng":-122.747147},"ele":81.3189156103434,"index":1.8681084389656604},{"id":1,"latlng":{"lat":37.934721,"lng":-122.747461},"ele":85.1838043599294,"index":1.48161956400706}]'
         vtileQuery.loadTiles(queryPoints,14,readTile, function (err,data) {
             vtileQuery.multiQuery(data, {tolerance:10,layer:'contour',fields:['ele','index']}, function(err, queryData) {
+                assert.equal(JSON.stringify(queryData),validResponse);
+                done();
+            });
+        });
+    });
+
+    it('should not interpolate when specified', function(done) {
+        var queryPoints = [[37.934205, -122.747147], [37.934721, -122.747461]];
+        var validResponse = '[{"id":0,"latlng":{"lat":37.934205,"lng":-122.747147},"ele":80,"index":2},{"id":1,"latlng":{"lat":37.934721,"lng":-122.747461},"ele":90,"index":1}]'
+        vtileQuery.loadTiles(queryPoints,14,readTile, function (err,data) {
+            vtileQuery.multiQuery(data, {tolerance:10,layer:'contour',fields:['ele','index'], interpolate: false}, function(err, queryData) {
                 assert.equal(JSON.stringify(queryData),validResponse);
                 done();
             });
