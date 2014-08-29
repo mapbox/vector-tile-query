@@ -17,6 +17,7 @@ Parses a Vector Tile protobuf and queries a layer for a a number of fields based
 * `options`: options for query:
  * `layer`: layer within the tile source to query. Example: `contour`
  * `fields`: `array` of fields within the layer to return data for. Example [`ele`]
+ * `interpolate` (optional): whether or not to interpolate between closest two features. Example `false`. Default `true`
 * `callback`: `function(err,data) {...}` to call upon completion of query
 
 #### Output
