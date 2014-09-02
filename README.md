@@ -2,7 +2,7 @@
 vector-tile-query
 ================
 
-vector-tile-query allows you to query vector tiles and return data values from these tiles. This module consists of one main function, and two utility / helper functions.
+vector-tile-query allows you to query [Mapbox Vector Tiles](https://github.com/mapbox/vector-tile-spec) and return data values from these tiles. This module consists of one main function, and two utility / helper functions.
 
 ### `queryTile(<pbuf>, <tileInfo>, <queryPoints>, <pointIDs>, <options>, <callback>);`
 
