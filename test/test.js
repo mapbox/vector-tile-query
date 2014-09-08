@@ -13,8 +13,9 @@ function readTile(tile,callback) {
 describe('Load relevant tiles from list of coords', function() {
     it('should fail if tile does not exist', function(done) {
         var queryCoords = [[37.934205,-122.747147], [37.934721, -122.747461], [38.93512, -122.747993]];
+        var validError = 'ENOENT';
         vtileQuery.loadTiles(queryCoords,14,readTile, function (err,data) {
-            assert.equal(err.message,"Tile not loaded")
+            assert.equal(err.code,validError);
             done();
         });   
     });

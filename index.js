@@ -18,7 +18,7 @@ function loadTiles(queryPoints, zoom, loadFunction, callback) {
 
     function loadTileAsync(tileObj, loadFunction, callback) {
         loadFunction(tileObj.zxy, function(err, data) {
-            if (err) return callback(new Error('Tile not loaded'));
+            if (err) return callback(err);
             tileObj.data = data;
             return callback(null, tileObj);
         });
@@ -67,10 +67,12 @@ function queryTile(pbuf, tileInfo, queryPoints, pointIDs, options, callback) {
     }
 
     function query(vt, queryPoints, layer, fields, tolerance) {
+        var start = new Date();
         var data = vt.queryMany(queryPoints, {
             layer: layer,
             tolerance: tolerance
         });
+        if (options.DEBUG) console.log("Query time:"+(new Date()-start)+' ('+data.features.length+')');
         return _.values(data.hits).map(function(hit) {
             hit.sort(sortBy('distance'));
             if (hit.length > 1 && hit[hit.length - 1].distance !== 0 && interpolate === true) {
