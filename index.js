@@ -18,7 +18,7 @@ function loadTiles(queryPoints, zoom, loadFunction, callback) {
 
     function loadTileAsync(tileObj, loadFunction, callback) {
         loadFunction(tileObj.zxy, function(err, data) {
-            if (err) return callback(new Error('Tile not loaded'));
+            if (err) return callback(err);
             tileObj.data = data;
             return callback(null, tileObj);
         });
