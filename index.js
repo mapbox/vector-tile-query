@@ -67,10 +67,17 @@ function queryTile(pbuf, tileInfo, queryPoints, pointIDs, options, callback) {
     }
 
     function query(vt, queryPoints, layer, fields, tolerance) {
-        var data = vt.queryMany(queryPoints, {
-            layer: layer,
-            tolerance: tolerance
-        });
+        var data;
+        if (vt.names().indexOf(layer) !== -1) {
+            data = vt.queryMany(queryPoints, {
+                layer: layer,
+                tolerance: tolerance
+            });
+        } else {
+            data = {
+                hits: []
+            }
+        }
         return _.values(data.hits).map(function(hit) {
             hit.sort(sortBy('distance'));
             if (hit.length > 1 && hit[hit.length - 1].distance !== 0 && interpolate === true) {
