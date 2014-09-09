@@ -67,12 +67,10 @@ function queryTile(pbuf, tileInfo, queryPoints, pointIDs, options, callback) {
     }
 
     function query(vt, queryPoints, layer, fields, tolerance) {
-        var start = new Date();
         var data = vt.queryMany(queryPoints, {
             layer: layer,
             tolerance: tolerance
         });
-        if (options.DEBUG) console.log("Query time:"+(new Date()-start)+' ('+data.features.length+')');
         return _.values(data.hits).map(function(hit) {
             hit.sort(sortBy('distance'));
             if (hit.length > 1 && hit[hit.length - 1].distance !== 0 && interpolate === true) {
