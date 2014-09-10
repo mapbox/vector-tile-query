@@ -73,12 +73,13 @@ function queryTile(pbuf, tileInfo, queryPoints, pointIDs, options, callback) {
                 layer: layer,
                 tolerance: tolerance
             });
+            console.log(data.hits)
         } else {
             data = {
-                hits: []
+                hits: {}
             };
-            for (var i; i<queryPoints.length; i++) {
-                data.hits.push([]);
+            for (var i = 0; i < queryPoints.length; i++) {
+                data.hits[i] = [];
             }
         }
         return _.values(data.hits).map(function(hit) {
