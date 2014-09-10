@@ -75,7 +75,10 @@ function queryTile(pbuf, tileInfo, queryPoints, pointIDs, options, callback) {
             });
         } else {
             data = {
-                hits: []
+                hits: {}
+            };
+            for (var i = 0; i < queryPoints.length; i++) {
+                data.hits[i] = [];
             }
         }
         return _.values(data.hits).map(function(hit) {
