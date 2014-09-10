@@ -143,4 +143,15 @@ describe('Test for invalid data', function() {
             done();
         })
     });
+
+    it('return nulls from a tile without the query layer', function(done) {
+        var queryPoints = [[4.429759750371,52.0034107082020],[4.42974,52.0036]];
+        var pointIDs = [1,2];
+        var validResponse = '[{"id":1,"latlng":{"lat":52.003410708202,"lng":4.429759750371},"class":null},{"id":2,"latlng":{"lat":52.0036,"lng":4.42974},"class":null}]';
+        vtileQuery.queryTile({}, { z: 14, x: 4621, y: 6177 }, queryPoints, pointIDs, {layer:'road',fields:['class']}, function (err, queryData) {
+            assert.equal(JSON.stringify(queryData),validResponse);
+            done();
+        })
+    });
+
 });

@@ -73,7 +73,6 @@ function queryTile(pbuf, tileInfo, queryPoints, pointIDs, options, callback) {
                 layer: layer,
                 tolerance: tolerance
             });
-            console.log(data.hits)
         } else {
             data = {
                 hits: {}
