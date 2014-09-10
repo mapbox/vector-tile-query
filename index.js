@@ -76,6 +76,9 @@ function queryTile(pbuf, tileInfo, queryPoints, pointIDs, options, callback) {
         } else {
             data = {
                 hits: []
+            };
+            for (var i; i<queryPoints.length; i++) {
+                data.hits.push([]);
             }
         }
         return _.values(data.hits).map(function(hit) {
