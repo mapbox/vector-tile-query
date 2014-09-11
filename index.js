@@ -85,7 +85,7 @@ function queryTile(pbuf, tileInfo, queryPoints, pointIDs, options, callback) {
                 layer: layer,
                 tolerance: tolerance
             });
-            queryManyTimer.stop();
+            vtQueryManyTimer.stop();
 
         } else {
             data = {
