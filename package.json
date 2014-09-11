@@ -23,10 +23,11 @@
   },
   "main": "./index",
   "dependencies": {
+    "lodash": "~2.4.1",
+    "lynx": "^0.2.0",
     "mapnik": "1.4.12",
     "queue-async": "1.0.7",
-    "sphericalmercator": "~1.0.2",
-    "lodash": "~2.4.1"
+    "sphericalmercator": "~1.0.2"
   },
   "devDependencies": {
     "mocha": "1.17.x",

@@ -3,6 +3,8 @@ var sphericalmercator = require('sphericalmercator');
 var sm = new sphericalmercator();
 var async = require('queue-async');
 var _ = require('lodash');
+var lynx = require('lynx');
+var metrics = new lynx('localhost', 8125, {scope: 'api.vector-tile-query'});
 
 function sortBy(sortField) {
     return function sortCallback(a, b) {
@@ -14,6 +16,7 @@ function sortBy(sortField) {
 
 function loadTiles(queryPoints, zoom, loadFunction, callback) {
 
+    var loadTilesTimer = metrics.createTimer('loadTiles.time');
     if (!queryPoints[0].length) return callback(new Error('Invalid query points'));
 
     function loadTileAsync(tileObj, loadFunction, callback) {
@@ -25,6 +28,8 @@ function loadTiles(queryPoints, zoom, loadFunction, callback) {
     }
 
     function buildQuery(points, zoom) {
+
+        var buildQueryTimer = metrics.createTimer('buildQuery.time');
         var queryObject = {}, output = [];
         for (var i = 0; i < points.length; i++) {
             var xyz = sm.xyz([points[i][1], points[i][0], points[i][1], points[i][0]], zoom);
@@ -48,6 +53,8 @@ function loadTiles(queryPoints, zoom, loadFunction, callback) {
             }
         }
         return output;
+        buildQueryTimer.stop();
+
     }
 
     var tilePoints = buildQuery(queryPoints,zoom);
@@ -58,10 +65,13 @@ function loadTiles(queryPoints, zoom, loadFunction, callback) {
     }
 
     loadQueue.awaitAll(callback);
+    loadTilesTimer.stop();
+
 }
 
 function queryTile(pbuf, tileInfo, queryPoints, pointIDs, options, callback) {
 
+    var queryTileTimer = metrics.createTimer('queryTile.time');
     function createNulls() {
         return null;
     }
@@ -82,7 +92,12 @@ function queryTile(pbuf, tileInfo, queryPoints, pointIDs, options, callback) {
             }
         }
         return _.values(data.hits).map(function(hit) {
+
+            var distanceSortTimer = metrics.createTimer('distanceSort.time');
             hit.sort(sortBy('distance'));
+            distanceSortTimer.stop();
+
+            var createFieldValuesTimer = metrics.createTimer('createFieldValues.time');
             if (hit.length > 1 && hit[hit.length - 1].distance !== 0 && interpolate === true) {
                 return fields.map(function(field) {
                     if (isNaN(data.features[hit[0].feature_id].attributes()[field])) {
@@ -104,6 +119,8 @@ function queryTile(pbuf, tileInfo, queryPoints, pointIDs, options, callback) {
                     return data.features[hit[hit.length - 1].feature_id].attributes()[field];
                 });
             }
+            createFieldValuesTimer.stop();
+
         }).map(function(fieldValues, i) {
             var output = {
                 id: pointIDs[i],
@@ -118,6 +135,7 @@ function queryTile(pbuf, tileInfo, queryPoints, pointIDs, options, callback) {
             return output;
         });
     }
+    queryTileTimer.stop();
 
     var outputData;
     var fields;
@@ -169,6 +187,7 @@ function queryTile(pbuf, tileInfo, queryPoints, pointIDs, options, callback) {
 
 function multiQuery(dataArr,options,callback) {
 
+    var multiQueryTimer = metrics.createTimer('multiQuery.time');
     function queriesDone(err, queries) {
         if (err) return callback(err);
         var dataOutput = [];
@@ -184,6 +203,8 @@ function multiQuery(dataArr,options,callback) {
     }
 
     queryQueue.awaitAll(queriesDone);
+    multiQueryTimer.stop();
+
 }
 
 module.exports = {
