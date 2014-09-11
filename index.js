@@ -80,7 +80,7 @@ function queryTile(pbuf, tileInfo, queryPoints, pointIDs, options, callback) {
         var data;
         if (vt.names().indexOf(layer) !== -1) {
 
-            var vt.queryManyTimer = metrics.createTimer('vt.queryMany');
+            var vtQueryManyTimer = metrics.createTimer('vt.queryMany');
             data = vt.queryMany(queryPoints, {
                 layer: layer,
                 tolerance: tolerance
