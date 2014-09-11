@@ -161,11 +161,15 @@ function queryTile(pbuf, tileInfo, queryPoints, pointIDs, options, callback) {
     if (Object.keys(pbuf).length !== 0) {
         var vt = new mapnik.VectorTile(tileInfo.z,tileInfo.x,tileInfo.y);
         vt.setData(pbuf);
+
+        var queryTimer = metrics.createTimer('query.time');
         vt.parse(function(err) {
             if (err) return callback(err);
             outputData = query(vt, queryPoints,layer,fields, tolerance);
             return callback(null, outputData);
         });
+        queryTimer.stop();
+
     } else {
         outputData = [];
         for (var i = 0; i < queryPoints.length; i++) {
