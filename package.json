@@ -27,7 +27,8 @@
     "lynx": "^0.2.0",
     "mapnik": "1.4.12",
     "queue-async": "1.0.7",
-    "sphericalmercator": "~1.0.2"
+    "sphericalmercator": "~1.0.2",
+    "cubic-spline": "1.0.0"
   },
   "devDependencies": {
     "mocha": "1.17.x",
