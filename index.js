@@ -206,22 +206,23 @@ function multiQuery(dataArr,options,callback) {
             options.fields.map(function(field) {
                 lineStrings[field] = [];
                 if (lineStrings.id.length === 0) {
-                    dataOutput.map(function(feat) {
-                        lineStrings[field].push(feat[field]);
-                        lineStrings.id.push(feat.id);
-                    });
+                    for (var i = 0; i < dataOutput.length; i++) {
+                        lineStrings[field].push(dataOutput[i][field]);
+                        lineStrings.id.push(dataOutput[i].id);
+                    }
                 } else {
-                    dataOutput.map(function(feat) {
-                        lineStrings[field].push(feat[field]);
-                    });
+                    for (var i = 0; i < dataOutput.length; i++) {
+                        lineStrings[field].push(dataOutput[i][field]);
+                    }
                 }
             });
             options.fields.map(function(field) {
                 dataOutput.map(function(feat, i) {
-                    feat[field] = spline(lineStrings.id[i], lineStrings.id,lineStrings[field]);
+                    feat[field] = spline(feat.id, lineStrings.id, lineStrings[field],5);
                 });
             });
-        } 
+
+        }
             return callback(null, dataOutput);
     }
 
