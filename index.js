@@ -66,9 +66,22 @@ function queryTile(pbuf, tileInfo, queryPoints, pointIDs, options, callback) {
         return null;
     }
 
-    function query(vt, queryPoints, layer, fields, tolerance, callback) {
-        if (vt.names().indexOf(layer) === -1) return callback(null, []);
-        vt.queryMany(queryPoints, { layer: layer, tolerance: tolerance }, queryFinalize);
+    function createEmptyResponse(respLength, callback) {
+            var data = {
+                hits: {}
+            };
+            for (var i = 0; i < respLength; i++) {
+                data.hits[i] = [];
+            }
+            return callback(null, data);
+    }
+
+    function query(vt, queryPoints, layer, fields, tolerance) {
+        if (vt.names().indexOf(layer) === -1) {
+            createEmptyResponse(queryPoints.length,queryFinalize);
+        } else {
+            vt.queryMany(queryPoints, { layer: layer, tolerance: tolerance }, queryFinalize);
+        }
     }
 
     function queryFinalize(err, data) {
