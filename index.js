@@ -66,22 +66,14 @@ function queryTile(pbuf, tileInfo, queryPoints, pointIDs, options, callback) {
         return null;
     }
 
-    function query(vt, queryPoints, layer, fields, tolerance) {
-        var data;
-        if (vt.names().indexOf(layer) !== -1) {
-            data = vt.queryMany(queryPoints, {
-                layer: layer,
-                tolerance: tolerance
-            });
-        } else {
-            data = {
-                hits: {}
-            };
-            for (var i = 0; i < queryPoints.length; i++) {
-                data.hits[i] = [];
-            }
-        }
-        return _.values(data.hits).map(function(hit) {
+    function query(vt, queryPoints, layer, fields, tolerance, callback) {
+        if (vt.names().indexOf(layer) === -1) return callback(null, []);
+        vt.queryMany(queryPoints, { layer: layer, tolerance: tolerance }, queryFinalize);
+    }
+
+    function queryFinalize(err, data) {
+        if (err) return callback(err);
+        var processed = _.values(data.hits).map(function(hit) {
             hit.sort(sortBy('distance'));
             if (hit.length > 1 && hit[hit.length - 1].distance !== 0 && interpolate === true) {
                 return fields.map(function(field) {
@@ -117,6 +109,7 @@ function queryTile(pbuf, tileInfo, queryPoints, pointIDs, options, callback) {
             }
             return output;
         });
+        return callback(null, processed);
     }
 
     var outputData;
@@ -145,8 +138,7 @@ function queryTile(pbuf, tileInfo, queryPoints, pointIDs, options, callback) {
         vt.setData(pbuf);
         vt.parse(function(err) {
             if (err) return callback(err);
-            outputData = query(vt, queryPoints,layer,fields, tolerance);
-            return callback(null, outputData);
+            query(vt, queryPoints,layer,fields, tolerance, callback);
         });
     } else {
         outputData = [];
