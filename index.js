@@ -160,7 +160,6 @@ function convert(queryPoints, pointIDs, fields, interpolate, data) {
     }
 
     return _.values(data.hits).map(function(hit) {
-        hit.sort(sortBy('distance'));
         if (hit.length > 1 && hit[hit.length - 1].distance !== 0 && interpolate === true) {
             return fields.map(function(field) {
                 if (isNaN(data.features[hit[0].feature_id].attr[field])) {
