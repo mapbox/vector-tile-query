@@ -159,41 +159,49 @@ function convert(queryPoints, pointIDs, fields, interpolate, data) {
         }
     }
 
-    return _.values(data.hits).map(function(hit) {
-        if (hit.length > 1 && hit[hit.length - 1].distance !== 0 && interpolate === true) {
-            return fields.map(function(field) {
-                if (isNaN(data.features[hit[0].feature_id].attr[field])) {
-                    return data.features[hit[0].feature_id].attr[field];
-                } else {
-                    var distanceRatio = hit[1].distance / (hit[0].distance + hit[1].distance);
-                    var queryDifference = (data.features[hit[0].feature_id].attr[field] - data.features[hit[1].feature_id].attr[field]);
-                    return data.features[hit[1].feature_id].attr[field] + queryDifference * distanceRatio;
-                }
-            });
-        } else if (hit.length < 1) {
-            return fields.map(createNulls);
-        } else if (hit.length === 1 || interpolate === false) {
-            return fields.map(function(field) {
-                return data.features[hit[0].feature_id].attr[field];
-            });
-        } else if (hit[hit.length - 1].distance === 0) {
-            return fields.map(function(field) {
-                return data.features[hit[hit.length - 1].feature_id].attr[field];
-            });
-        }
-    }).map(function(fieldValues, i) {
-        var output = {
+    var fieldsLength = fields.length;
+    var converted = [];
+    for (var i in data.hits) {
+        var res = {
             id: pointIDs[i],
             latlng: {
                 lat: queryPoints[i][1],
                 lng: queryPoints[i][0]
             }
         };
-        for (var f=0; f<fields.length; f++) {
-            output[fields[f]] = fieldValues[f];
+
+        var hit = data.hits[i];
+        if (hit.length > 1 && hit[hit.length - 1].distance !== 0 && interpolate === true) {
+            for (var j = 0; j < fieldsLength; j++) {
+                var field = fields[j];
+                var val0 = data.features[hit[0].feature_id].attr[field];
+                var val1 = data.features[hit[1].feature_id].attr[field];
+                if (isNaN(val0)) {
+                    res[field] = val0;
+                } else {
+                    res[field] = val1 + (val0 - val1) * (hit[1].distance / (hit[0].distance + hit[1].distance));
+                }
+            }
+        } else if (hit.length < 1) {
+            for (var j = 0; j < fieldsLength; j++) {
+                var field = fields[j];
+                res[field] = null;
+            }
+        } else if (hit.length === 1 || interpolate === false) {
+            for (var j = 0; j < fieldsLength; j++) {
+                var field = fields[j];
+                res[field] = data.features[hit[0].feature_id].attr[field];
+            }
+        } else if (hit[hit.length - 1].distance === 0) {
+            for (var j = 0; j < fieldsLength; j++) {
+                var field = fields[j];
+                res[field] = data.features[hit[hit.length - 1].feature_id].attr[field];
+            }
         }
-        return output;
-    });
+
+        converted.push(res);
+    }
+    return converted;
 }
 
 function createNulls() {
