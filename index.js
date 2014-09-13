@@ -153,27 +153,33 @@ function multiQuery(dataArr,options,callback) {
 
 // Convert raw results from vt.queryMany into formatted output.
 function convert(queryPoints, pointIDs, fields, interpolate, data) {
+    if (data.features) {
+        for (var k in data.features) {
+            data.features[k].attr = data.features[k].attributes();
+        }
+    }
+
     return _.values(data.hits).map(function(hit) {
         hit.sort(sortBy('distance'));
         if (hit.length > 1 && hit[hit.length - 1].distance !== 0 && interpolate === true) {
             return fields.map(function(field) {
-                if (isNaN(data.features[hit[0].feature_id].attributes()[field])) {
-                    return data.features[hit[0].feature_id].attributes()[field];
+                if (isNaN(data.features[hit[0].feature_id].attr[field])) {
+                    return data.features[hit[0].feature_id].attr[field];
                 } else {
                     var distanceRatio = hit[1].distance / (hit[0].distance + hit[1].distance);
-                    var queryDifference = (data.features[hit[0].feature_id].attributes()[field] - data.features[hit[1].feature_id].attributes()[field]);
-                    return data.features[hit[1].feature_id].attributes()[field] + queryDifference * distanceRatio;
+                    var queryDifference = (data.features[hit[0].feature_id].attr[field] - data.features[hit[1].feature_id].attr[field]);
+                    return data.features[hit[1].feature_id].attr[field] + queryDifference * distanceRatio;
                 }
             });
         } else if (hit.length < 1) {
             return fields.map(createNulls);
         } else if (hit.length === 1 || interpolate === false) {
             return fields.map(function(field) {
-                return data.features[hit[0].feature_id].attributes()[field];
+                return data.features[hit[0].feature_id].attr[field];
             });
         } else if (hit[hit.length - 1].distance === 0) {
             return fields.map(function(field) {
-                return data.features[hit[hit.length - 1].feature_id].attributes()[field];
+                return data.features[hit[hit.length - 1].feature_id].attr[field];
             });
         }
     }).map(function(fieldValues, i) {
