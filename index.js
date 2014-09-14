@@ -204,10 +204,6 @@ function convert(queryPoints, pointIDs, fields, interpolate, data) {
     return converted;
 }
 
-function createNulls() {
-    return null;
-}
-
 module.exports = {
     convert: convert,
     queryTile: queryTile,
