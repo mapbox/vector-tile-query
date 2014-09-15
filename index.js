@@ -19,7 +19,9 @@ function loadTiles(queryPoints, zoom, loadFunction, callback) {
     if (!queryPoints[0].length) return callback(new Error('Invalid query points'));
 
     function loadTileAsync(tileObj, loadFunction, callback) {
+        var loadTileAsyncTimer = metrics.createTimer('loadTileAsync.time');
         loadFunction(tileObj.zxy, function(err, data) {
+            loadTileAsyncTimer.stop();
             if (err) return callback(err);
             tileObj.data = data;
             return callback(null, tileObj);
@@ -57,13 +59,11 @@ function loadTiles(queryPoints, zoom, loadFunction, callback) {
     var tilePoints = buildQuery(queryPoints,zoom);
     var loadQueue = new async();
 
-    var loadTileAsyncTimer = metrics.createTimer('loadTileAsync.time');
     for (var i = 0; i < tilePoints.length; i++) {
         loadQueue.defer(loadTileAsync,tilePoints[i],loadFunction);
     }
 
     loadQueue.awaitAll(callback);
-    loadTileAsyncTimer.stop();
 }
 
 function queryTile(pbuf, tileInfo, queryPoints, pointIDs, options, callback) {
@@ -84,6 +84,7 @@ function queryTile(pbuf, tileInfo, queryPoints, pointIDs, options, callback) {
         } else {
             vt.queryMany(queryPoints, { layer: layer, tolerance: tolerance }, queryFinalize);
         }
+        queryTimer.stop();
     }
 
     function queryFinalize(err, data) {
@@ -120,9 +121,8 @@ function queryTile(pbuf, tileInfo, queryPoints, pointIDs, options, callback) {
             if (err) return callback(err);
             var queryTimer = metrics.createTimer('query.time');
             query(vt, queryPoints,layer,fields, tolerance, callback);
-            queryTimer.stop();
+            parseTimer.stop();
         });
-        parseTimer.stop();
     } else {
         outputData = [];
         var createJSONTimer = metrics.createTimer('createJSONTimer.time');
