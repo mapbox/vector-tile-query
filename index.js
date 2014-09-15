@@ -3,6 +3,8 @@ var sphericalmercator = require('sphericalmercator');
 var sm = new sphericalmercator();
 var async = require('queue-async');
 var _ = require('lodash');
+var lynx = require('lynx');
+var metrics = new lynx('localhost', 8125, {scope: 'api.vector-tile-query-async-2'});
 
 function sortBy(sortField) {
     return function sortCallback(a, b) {
@@ -25,6 +27,7 @@ function loadTiles(queryPoints, zoom, loadFunction, callback) {
     }
 
     function buildQuery(points, zoom) {
+        var buildQueryTimer = metrics.createTimer('buildQuery.time');
         var queryObject = {}, output = [];
         for (var i = 0; i < points.length; i++) {
             var xyz = sm.xyz([points[i][1], points[i][0], points[i][1], points[i][0]], zoom);
@@ -47,17 +50,20 @@ function loadTiles(queryPoints, zoom, loadFunction, callback) {
                 queryObject[tileName].pointIDs.push(i);
             }
         }
+        buildQueryTimer.stop();
         return output;
     }
 
     var tilePoints = buildQuery(queryPoints,zoom);
     var loadQueue = new async();
 
+    var loadTileAsyncTimer = metrics.createTimer('loadTileAsync.time');
     for (var i = 0; i < tilePoints.length; i++) {
         loadQueue.defer(loadTileAsync,tilePoints[i],loadFunction);
     }
 
     loadQueue.awaitAll(callback);
+    loadTileAsyncTimer.stop();
 }
 
 function queryTile(pbuf, tileInfo, queryPoints, pointIDs, options, callback) {
@@ -107,14 +113,19 @@ function queryTile(pbuf, tileInfo, queryPoints, pointIDs, options, callback) {
     }
 
     if (Object.keys(pbuf).length !== 0) {
+        var parseTimer = metrics.createTimer('parse.time');
         var vt = new mapnik.VectorTile(tileInfo.z,tileInfo.x,tileInfo.y);
         vt.setData(pbuf);
         vt.parse(function(err) {
             if (err) return callback(err);
+            var queryTimer = metrics.createTimer('query.time');
             query(vt, queryPoints,layer,fields, tolerance, callback);
+            queryTimer.stop();
         });
+        parseTimer.stop();
     } else {
         outputData = [];
+        var createJSONTimer = metrics.createTimer('createJSONTimer.time');
         for (var i = 0; i < queryPoints.length; i++) {
             var output = {
                 id: pointIDs[i],
@@ -128,20 +139,26 @@ function queryTile(pbuf, tileInfo, queryPoints, pointIDs, options, callback) {
             }
             outputData.push(output);
         }
+        createJSONTimer.stop();
         return callback(null, outputData);
     }
 }
 
 function multiQuery(dataArr,options,callback) {
-
+    var multiQueryTimer = metrics.createTimer('multiQuery.time');
     function queriesDone(err, queries) {
+        var queriesDoneTimer = metrics.createTimer('queriesDone.time');
         if (err) return callback(err);
         var dataOutput = [];
         dataOutput = dataOutput.concat.apply(dataOutput, queries);
+        var sortTimer = metrics.createTimer('sort.time');
         dataOutput.sort(sortBy('id'));
+        sortTimer.stop();
+        queriesDoneTimer.stop();
         return callback(null, dataOutput);
     }
 
+    var queryTileTimer = metrics.createTimer('queryTileTimer');
     var queryQueue = new async();
 
     for (var i = 0; i<dataArr.length; i++) {
@@ -149,18 +166,23 @@ function multiQuery(dataArr,options,callback) {
     }
 
     queryQueue.awaitAll(queriesDone);
+    queryTileTimer.stop();
+    multiQueryTimer.stop();
 }
 
 // Convert raw results from vt.queryMany into formatted output.
 function convert(queryPoints, pointIDs, fields, interpolate, data) {
     if (data.features) {
+        var getAttributesTimer = metrics.createTimer('getAttributes.time');
         for (var k in data.features) {
             data.features[k].attr = data.features[k].attributes();
         }
+        getAttributesTimer.stop();
     }
 
     var fieldsLength = fields.length;
     var converted = [];
+    var hitsForLoopTimer = metrics.createTimer('hitsForLoop.time');
     for (var i in data.hits) {
         var res = {
             id: pointIDs[i],
@@ -171,6 +193,7 @@ function convert(queryPoints, pointIDs, fields, interpolate, data) {
         };
 
         var hit = data.hits[i];
+        var ifChecksTimer = metrics.createTimer('ifChecksTimer.time');
         if (hit.length > 1 && hit[hit.length - 1].distance !== 0 && interpolate === true) {
             for (var j = 0; j < fieldsLength; j++) {
                 var field = fields[j];
@@ -198,9 +221,11 @@ function convert(queryPoints, pointIDs, fields, interpolate, data) {
                 res[field] = data.features[hit[hit.length - 1].feature_id].attr[field];
             }
         }
+        ifChecksTimer.stop();
 
         converted.push(res);
     }
+    hitsForLoopTimer.stop();
     return converted;
 }
 
