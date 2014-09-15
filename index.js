@@ -67,6 +67,7 @@ function loadTiles(queryPoints, zoom, loadFunction, callback) {
 }
 
 function queryTile(pbuf, tileInfo, queryPoints, pointIDs, options, callback) {
+    var queryTimer = metrics.createTimer('query.time');
 
     function createEmptyResponse(respLength, callback) {
             var data = {
@@ -119,7 +120,6 @@ function queryTile(pbuf, tileInfo, queryPoints, pointIDs, options, callback) {
         vt.setData(pbuf);
         vt.parse(function(err) {
             if (err) return callback(err);
-            var queryTimer = metrics.createTimer('query.time');
             query(vt, queryPoints,layer,fields, tolerance, callback);
             parseTimer.stop();
         });
