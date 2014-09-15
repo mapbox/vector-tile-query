@@ -146,6 +146,7 @@ function multiQuery(dataArr,options,callback) {
     var multiQueryTimer = metrics.createTimer('multiQuery.time');
     function queriesDone(err, queries) {
         var queriesDoneTimer = metrics.createTimer('queriesDone.time');
+        multiQueryTimer.stop();
         if (err) return callback(err);
         var dataOutput = [];
         dataOutput = dataOutput.concat.apply(dataOutput, queries);
@@ -165,7 +166,6 @@ function multiQuery(dataArr,options,callback) {
 
     queryQueue.awaitAll(queriesDone);
     queryTileTimer.stop();
-    multiQueryTimer.stop();
 }
 
 // Convert raw results from vt.queryMany into formatted output.
