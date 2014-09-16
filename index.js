@@ -60,6 +60,7 @@ function loadTiles(queryPoints, zoom, loadFunction, callback) {
     var loadQueue = new async();
 
     for (var i = 0; i < tilePoints.length; i++) {
+        metrics.increment('loadTileAsync.increment', 1);
         loadQueue.defer(loadTileAsync,tilePoints[i],loadFunction);
     }
 
@@ -161,6 +162,7 @@ function multiQuery(dataArr,options,callback) {
     var queryQueue = new async();
 
     for (var i = 0; i<dataArr.length; i++) {
+        metrics.increment('queryTile.increment', 1);
         queryQueue.defer(queryTile, dataArr[i].data, dataArr[i].zxy, dataArr[i].points, dataArr[i].pointIDs, options);
     }
 
