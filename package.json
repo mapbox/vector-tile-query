@@ -23,13 +23,7 @@
   },
   "main": "./index",
   "dependencies": {
-<<<<<<< HEAD
     "mapnik": "mapnik/node-mapnik#vt-query-async",
-=======
-    "lodash": "~2.4.1",
-    "lynx": "^0.2.0",
-    "mapnik": "1.4.12",
->>>>>>> new-interpolate
     "queue-async": "1.0.7",
     "sphericalmercator": "~1.0.2",
     "cubic-spline": "1.0.0"
