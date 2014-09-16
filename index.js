@@ -12,7 +12,7 @@ function sortBy(sortField) {
     };
 }
 
-function loadTiles(queryPoints, zoom, loadFunction, callback) {
+function loadTiles(queryPoints, maxZoom, loadFunction, callback) {
 
     if (!queryPoints[0].length) return callback(new Error('Invalid query points'));
 
@@ -50,14 +50,38 @@ function loadTiles(queryPoints, zoom, loadFunction, callback) {
         return output;
     }
 
-    var tilePoints = buildQuery(queryPoints,zoom);
-    var loadQueue = new async();
-
-    for (var i = 0; i < tilePoints.length; i++) {
-        loadQueue.defer(loadTileAsync,tilePoints[i],loadFunction);
+    function checkTileLength(tiles, currentZoom, threshold, callback) {
+        if(tiles.length > threshold){
+            var newZoom = currentZoom - 1;
+            var newTiles = buildQuery(queryPoints, newZoom);
+            if(newTiles.length > threshold){
+                try {
+                    checkTileLength(newTiles, newZoom, threshold);
+                } catch(e) {
+                    return callback(e, null);
+                } finally {
+                    return callback(null, newTiles);
+                }
+            } else {
+                return callback(null, newTiles);
+            }
+        } else {
+            return callback(null, tiles);
+        }
     }
 
-    loadQueue.awaitAll(callback);
+    var tilePoints = buildQuery(queryPoints, maxZoom);
+    checkTileLength(tilePoints, maxZoom, 10, function(error, tiles){
+        if(error) return callback('Threshold too low');
+        var loadQueue = new async();
+
+        for (var i = 0; i < tiles.length; i++) {
+            loadQueue.defer(loadTileAsync,tiles[i],loadFunction);
+        }
+
+        loadQueue.awaitAll(callback);
+    });
+
 }
 
 function queryTile(pbuf, tileInfo, queryPoints, pointIDs, options, callback) {
