@@ -2,9 +2,6 @@ var mapnik = require('mapnik');
 var sphericalmercator = require('sphericalmercator');
 var sm = new sphericalmercator();
 var async = require('queue-async');
-var _ = require('lodash');
-var lynx = require('lynx');
-var metrics = new lynx('localhost', 8125, {scope: 'api.vector-tile-query'});
 var spline = require('cubic-spline');
 
 function sortBy(sortField) {
@@ -15,11 +12,8 @@ function sortBy(sortField) {
     };
 }
 
-function loadTiles(queryPoints, zoom, loadFunction, callback) {
-
-    var loadTilesTimer = metrics.createTimer('loadTiles.time');
+function loadTiles(queryPoints, zoom, loadFunction, interval, callback) {
     if (!queryPoints[0].length) return callback(new Error('Invalid query points'));
-
     function loadTileAsync(tileObj, loadFunction, callback) {
         loadFunction(tileObj.zxy, function(err, data) {
             if (err) return callback(err);
@@ -28,33 +22,54 @@ function loadTiles(queryPoints, zoom, loadFunction, callback) {
         });
     }
 
-    function buildQuery(points, zoom) {
+    function buildQuery(points, zoom, interval) {
         var queryObject = {}, output = [];
         for (var i = 0; i < points.length; i++) {
-            var xyz = sm.xyz([points[i][1], points[i][0], points[i][1], points[i][0]], zoom);
-            var tileName = zoom + '/' + xyz.minX + '/' + xyz.minY;
-            if (queryObject[tileName] === undefined) {
-                queryObject[tileName] = {
-                    zxy: {
-                        z: zoom,
-                        x: xyz.minX,
-                        y: xyz.minY
-                    },
-                    points: [
-                        [points[i][1], points[i][0]]
-                    ],
-                    pointIDs: [i]
-                };
-                output.push(queryObject[tileName]);
+            if (Math.floor(i/interval)*interval === i || i === points.length-1) {
+                var xyz = sm.xyz([points[i][1], points[i][0], points[i][1], points[i][0]], zoom);
+                var tileName = zoom + '/' + xyz.minX + '/' + xyz.minY;
+                if (queryObject[tileName] === undefined) {
+                    queryObject[tileName] = {
+                        zxy: {
+                            z: zoom,
+                            x: xyz.minX,
+                            y: xyz.minY
+                        },
+                        points: [
+                            [points[i][1], points[i][0]]
+                        ],
+                        pointIDs: [i]
+                    };
+                    output.push(queryObject[tileName]);
+                } else {
+                    queryObject[tileName].points.push([points[i][1], points[i][0]]);
+                    queryObject[tileName].pointIDs.push(i);
+                }
             } else {
-                queryObject[tileName].points.push([points[i][1], points[i][0]]);
-                queryObject[tileName].pointIDs.push(i);
+                var tileName = 'nullPoints';
+                if (queryObject[tileName] === undefined) {
+                    queryObject[tileName] = {
+                        zxy: {
+                            z: -999,
+                            x: -999,
+                            y: -999
+                        },
+                        points: [
+                            [points[i][1], points[i][0]]
+                        ],
+                        pointIDs: [i]
+                    };
+                    output.push(queryObject[tileName]);
+                } else {
+                    queryObject[tileName].points.push([points[i][1], points[i][0]]);
+                    queryObject[tileName].pointIDs.push(i);
+                }
             }
         }
         return output;
     }
 
-    var tilePoints = buildQuery(queryPoints,zoom);
+    var tilePoints = buildQuery(queryPoints,zoom,interval);
     var loadQueue = new async();
 
     for (var i = 0; i < tilePoints.length; i++) {
@@ -62,7 +77,6 @@ function loadTiles(queryPoints, zoom, loadFunction, callback) {
     }
 
     loadQueue.awaitAll(callback);
-    loadTilesTimer.stop();
 
 }
 
@@ -90,13 +104,12 @@ function queryTile(pbuf, tileInfo, queryPoints, pointIDs, options, callback) {
         if (err) return callback(err);
         return callback(null, convert(queryPoints, pointIDs, fields, interpolate, data));
     }
-    queryTileTimer.stop();
 
     var outputData;
     var fields;
     var tolerance = options.tolerance || 10;
     var interpolate = options.interpolate !== undefined ? options.interpolate : true;
-    options.smooth = options.smooth !== undefined ? options.smooth: true;
+    options.smooth = options.smooth !== undefined ? options.smooth: false;
 
     if (options.fields) {
         fields = options.fields;
@@ -117,13 +130,10 @@ function queryTile(pbuf, tileInfo, queryPoints, pointIDs, options, callback) {
     if (Object.keys(pbuf).length !== 0) {
         var vt = new mapnik.VectorTile(tileInfo.z,tileInfo.x,tileInfo.y);
         vt.setData(pbuf);
-
-        //var queryTimer = metrics.createFieldValuesTimerimer('query.time');
         vt.parse(function(err) {
             if (err) return callback(err);
             query(vt, queryPoints,layer,fields, tolerance, callback);
         });
-        //queryTimer.stop();
 
     } else {
         outputData = [];
@@ -145,8 +155,8 @@ function queryTile(pbuf, tileInfo, queryPoints, pointIDs, options, callback) {
 }
 
 function multiQuery(dataArr,options,callback) {
-    var multiQueryTimer = metrics.createTimer('multiQuery.time');
     function queriesDone(err, queries) {
+        console.log(queries);
         if (err) return callback(err);
         var dataOutput = [];
         var lineStrings;
@@ -170,7 +180,7 @@ function multiQuery(dataArr,options,callback) {
                 }
             });
             options.fields.map(function(field) {
-                dataOutput.map(function(feat, i) {
+                dataOutput.map(function(feat) {
                     feat[field] = spline(feat.id, lineStrings.id, lineStrings[field],5);
                 });
             });
@@ -185,7 +195,6 @@ function multiQuery(dataArr,options,callback) {
     }
 
     queryQueue.awaitAll(queriesDone);
-    multiQueryTimer.stop();
 
 }
 
