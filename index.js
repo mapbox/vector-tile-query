@@ -68,73 +68,27 @@ function loadTiles(queryPoints, zoom, loadFunction, callback) {
 
 function queryTile(pbuf, tileInfo, queryPoints, pointIDs, options, callback) {
 
-    var queryTileTimer = metrics.createTimer('queryTile.time');
-    function createNulls() {
-        return null;
+    function createEmptyResponse(respLength, callback) {
+            var data = {
+                hits: {}
+            };
+            for (var i = 0; i < respLength; i++) {
+                data.hits[i] = [];
+            }
+            return callback(null, data);
     }
 
     function query(vt, queryPoints, layer, fields, tolerance) {
-        var data;
-        if (vt.names().indexOf(layer) !== -1) {
-
-            var vtQueryManyTimer = metrics.createTimer('vt.queryMany');
-            data = vt.queryMany(queryPoints, {
-                layer: layer,
-                tolerance: tolerance
-            });
-            vtQueryManyTimer.stop();
-
+        if (vt.names().indexOf(layer) === -1) {
+            createEmptyResponse(queryPoints.length,queryFinalize);
         } else {
-            data = {
-                hits: {}
-            };
-            for (var i = 0; i < queryPoints.length; i++) {
-                data.hits[i] = [];
-            }
+            vt.queryMany(queryPoints, { layer: layer, tolerance: tolerance }, queryFinalize);
         }
-        return _.values(data.hits).map(function(hit) {
+    }
 
-            var distanceSortTimer = metrics.createTimer('distanceSort.time');
-            hit.sort(sortBy('distance'));
-            distanceSortTimer.stop();
-
-            var createFieldValuesTimer = metrics.createTimer('createFieldValues.time');
-            if (hit.length > 1 && hit[hit.length - 1].distance !== 0 && interpolate === true) {
-                return fields.map(function(field) {
-                    if (isNaN(data.features[hit[0].feature_id].attributes()[field])) {
-                        return data.features[hit[0].feature_id].attributes()[field];
-                    } else {
-                        var distanceRatio = hit[1].distance / (hit[0].distance + hit[1].distance);
-                        var queryDifference = (data.features[hit[0].feature_id].attributes()[field] - data.features[hit[1].feature_id].attributes()[field]);
-                        return data.features[hit[1].feature_id].attributes()[field] + queryDifference * distanceRatio;
-                    }
-                });
-            } else if (hit.length < 1) {
-                return fields.map(createNulls);
-            } else if (hit.length === 1 || interpolate === false) {
-                return fields.map(function(field) {
-                    return data.features[hit[0].feature_id].attributes()[field];
-                });
-            } else if (hit[hit.length - 1].distance === 0) {
-                return fields.map(function(field) {
-                    return data.features[hit[hit.length - 1].feature_id].attributes()[field];
-                });
-            }
-            createFieldValuesTimer.stop();
-
-        }).map(function(fieldValues, i) {
-            var output = {
-                id: pointIDs[i],
-                latlng: {
-                    lat: queryPoints[i][1],
-                    lng: queryPoints[i][0]
-                }
-            };
-            for (var f=0; f<fields.length; f++) {
-                output[fields[f]] = fieldValues[f];
-            }
-            return output;
-        });
+    function queryFinalize(err, data) {
+        if (err) return callback(err);
+        return callback(null, convert(queryPoints, pointIDs, fields, interpolate, data));
     }
     queryTileTimer.stop();
 
@@ -167,8 +121,7 @@ function queryTile(pbuf, tileInfo, queryPoints, pointIDs, options, callback) {
         //var queryTimer = metrics.createFieldValuesTimerimer('query.time');
         vt.parse(function(err) {
             if (err) return callback(err);
-            outputData = query(vt, queryPoints,layer,fields, tolerance);
-            return callback(null, outputData);
+            query(vt, queryPoints,layer,fields, tolerance, callback);
         });
         //queryTimer.stop();
 
@@ -236,7 +189,61 @@ function multiQuery(dataArr,options,callback) {
 
 }
 
+// Convert raw results from vt.queryMany into formatted output.
+function convert(queryPoints, pointIDs, fields, interpolate, data) {
+    if (data.features) {
+        for (var k in data.features) {
+            data.features[k].attr = data.features[k].attributes();
+        }
+    }
+
+    var fieldsLength = fields.length;
+    var converted = [];
+    for (var i in data.hits) {
+        var res = {
+            id: pointIDs[i],
+            latlng: {
+                lat: queryPoints[i][1],
+                lng: queryPoints[i][0]
+            }
+        };
+
+        var hit = data.hits[i];
+        if (hit.length > 1 && hit[hit.length - 1].distance !== 0 && interpolate === true) {
+            for (var j = 0; j < fieldsLength; j++) {
+                var field = fields[j];
+                var val0 = data.features[hit[0].feature_id].attr[field];
+                var val1 = data.features[hit[1].feature_id].attr[field];
+                if (isNaN(val0)) {
+                    res[field] = val0;
+                } else {
+                    res[field] = val1 + (val0 - val1) * (hit[1].distance / (hit[0].distance + hit[1].distance));
+                }
+            }
+        } else if (hit.length < 1) {
+            for (var j = 0; j < fieldsLength; j++) {
+                var field = fields[j];
+                res[field] = null;
+            }
+        } else if (hit.length === 1 || interpolate === false) {
+            for (var j = 0; j < fieldsLength; j++) {
+                var field = fields[j];
+                res[field] = data.features[hit[0].feature_id].attr[field];
+            }
+        } else if (hit[hit.length - 1].distance === 0) {
+            for (var j = 0; j < fieldsLength; j++) {
+                var field = fields[j];
+                res[field] = data.features[hit[hit.length - 1].feature_id].attr[field];
+            }
+        }
+
+        converted.push(res);
+    }
+    return converted;
+}
+
 module.exports = {
+    convert: convert,
     queryTile: queryTile,
     loadTiles: loadTiles,
     multiQuery: multiQuery
