@@ -12,9 +12,9 @@ function sortBy(sortField) {
     };
 }
 
-function loadTiles(queryPoints, maxZoom, loadFunction, callback) {
-
+function loadTiles(queryPoints, maxZoom, threshold, loadFunction, callback) {
     if (!queryPoints[0].length) return callback(new Error('Invalid query points'));
+    if (!threshold) return callback(new Error('Specify a zoom level threshold'));
 
     function loadTileAsync(tileObj, loadFunction, callback) {
         loadFunction(tileObj.zxy, function(err, data) {
@@ -50,17 +50,15 @@ function loadTiles(queryPoints, maxZoom, loadFunction, callback) {
         return output;
     }
 
-    function checkTileLength(tiles, currentZoom, threshold, callback) {
+    function changeNumberTilesLoaded(tiles, currentZoom, threshold, callback) {
         if(tiles.length > threshold){
             var newZoom = currentZoom - 1;
             var newTiles = buildQuery(queryPoints, newZoom);
             if(newTiles.length > threshold){
                 try {
-                    checkTileLength(newTiles, newZoom, threshold);
+                    changeNumberTilesLoaded(newTiles, newZoom, threshold);
                 } catch(e) {
                     return callback(e, null);
-                } finally {
-                    return callback(null, newTiles);
                 }
             } else {
                 return callback(null, newTiles);
@@ -71,8 +69,8 @@ function loadTiles(queryPoints, maxZoom, loadFunction, callback) {
     }
 
     var tilePoints = buildQuery(queryPoints, maxZoom);
-    checkTileLength(tilePoints, maxZoom, 10, function(error, tiles){
-        if(error) return callback('Threshold too low');
+    changeNumberTilesLoaded(tilePoints, maxZoom, threshold, function(error, tiles){
+        if(error) return callback(new Error('Request too long'));
         var loadQueue = new async();
 
         for (var i = 0; i < tiles.length; i++) {
