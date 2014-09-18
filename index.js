@@ -106,7 +106,7 @@ function queryTile(pbuf, tileInfo, queryPoints, pointIDs, options, callback) {
         callback(new Error('Field array empty'));
     }
 
-    if (Object.keys(pbuf).length !== 0) {
+    if (pbuf && Buffer.isBuffer(pbuf)) {
         var vt = new mapnik.VectorTile(tileInfo.z,tileInfo.x,tileInfo.y);
         vt.setData(pbuf);
         vt.parse(function(err) {
