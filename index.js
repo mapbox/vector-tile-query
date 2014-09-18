@@ -64,10 +64,10 @@ function queryTile(pbuf, tileInfo, queryPoints, pointIDs, options, callback) {
 
     function createEmptyResponse(respLength, callback) {
             var data = {
-                hits: {}
+                hits: []
             };
             for (var i = 0; i < respLength; i++) {
-                data.hits[i] = [];
+                data.hits.push([]);
             }
             return callback(null, data);
     }
@@ -154,14 +154,14 @@ function multiQuery(dataArr,options,callback) {
 // Convert raw results from vt.queryMany into formatted output.
 function convert(queryPoints, pointIDs, fields, interpolate, data) {
     if (data.features) {
-        for (var k in data.features) {
+        for (var k = 0; k < data.features.length; k++) {
             data.features[k].attr = data.features[k].attributes();
         }
     }
 
     var fieldsLength = fields.length;
     var converted = [];
-    for (var i in data.hits) {
+    for (var i = 0; i < data.hits.length; i++) {
         var res = {
             id: pointIDs[i],
             latlng: {
