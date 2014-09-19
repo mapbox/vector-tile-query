@@ -12,7 +12,7 @@ function sortBy(sortField) {
     };
 }
 
-function loadTiles(queryPoints, maxZoom, threshold, loadFunction, callback) {
+function loadTiles(queryPoints, maxZoom, minZoom, threshold, loadFunction, callback) {
     if (!queryPoints[0].length) return callback(new Error('Invalid query points'));
     if (!threshold) return callback(new Error('Specify a zoom level threshold'));
 
@@ -50,36 +50,39 @@ function loadTiles(queryPoints, maxZoom, threshold, loadFunction, callback) {
         return output;
     }
 
-    function changeNumberTilesLoaded(tiles, currentZoom, threshold, callback) {
-        if(tiles.length > threshold){
-            var newZoom = currentZoom - 1;
-            var newTiles = buildQuery(queryPoints, newZoom);
-            if(newTiles.length > threshold){
-                try {
-                    changeNumberTilesLoaded(newTiles, newZoom, threshold);
-                } catch(e) {
-                    return callback(e, null);
-                }
-            } else {
-                return callback(null, newTiles);
-            }
-        } else {
-            return callback(null, tiles);
-        }
+    var initialTileLoad = buildQuery(queryPoints, maxZoom);
+    var reducuedTiles = changeNumberTilesLoaded(buildQuery, initialTileLoad, queryPoints, maxZoom, minZoom, threshold);
+    if(!reducuedTiles) return callback(new Error('Too many tiles have been requested'));
+
+    var loadQueue = new async();
+    for (var i = 0; i < reducuedTiles.length; i++) {
+        loadQueue.defer(loadTileAsync,reducuedTiles[i],loadFunction);
     }
 
-    var tilePoints = buildQuery(queryPoints, maxZoom);
-    changeNumberTilesLoaded(tilePoints, maxZoom, threshold, function(error, tiles){
-        if(error) return callback(new Error('Request too long'));
-        var loadQueue = new async();
+    loadQueue.awaitAll(callback);
 
-        for (var i = 0; i < tiles.length; i++) {
-            loadQueue.defer(loadTileAsync,tiles[i],loadFunction);
+}
+
+function changeNumberTilesLoaded(buildQuery, tiles, points, currentZoom, minZoom, threshold) {
+    if(tiles.length > threshold){
+        var newZoom = currentZoom - 1;
+        if(newZoom >= minZoom){
+            var newTiles = buildQuery(points, newZoom);
+            if(newTiles.length > threshold){
+                try {
+                    changeNumberTilesLoaded(buildQuery, newTiles, points, newZoom, minZoom, threshold);
+                } catch(e) {
+                    return e;
+                }
+            } else {
+                return newTiles;
+            }
+        } else {
+            return tiles;
         }
-
-        loadQueue.awaitAll(callback);
-    });
-
+    } else {
+        return tiles;
+    }
 }
 
 function queryTile(pbuf, tileInfo, queryPoints, pointIDs, options, callback) {
@@ -230,5 +233,6 @@ module.exports = {
     convert: convert,
     queryTile: queryTile,
     loadTiles: loadTiles,
+    changeNumberTilesLoaded: changeNumberTilesLoaded,
     multiQuery: multiQuery
 };
