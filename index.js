@@ -12,6 +12,32 @@ function sortBy(sortField) {
     };
 }
 
+function buildQuery(points, zoom) {
+    var queryObject = {}, output = [];
+    for (var i = 0; i < points.length; i++) {
+        var xyz = sm.xyz([points[i][1], points[i][0], points[i][1], points[i][0]], zoom);
+        var tileName = zoom + '/' + xyz.minX + '/' + xyz.minY;
+        if (queryObject[tileName] === undefined) {
+            queryObject[tileName] = {
+                zxy: {
+                    z: zoom,
+                    x: xyz.minX,
+                    y: xyz.minY
+                },
+                points: [
+                    [points[i][1], points[i][0]]
+                ],
+                pointIDs: [i]
+            };
+            output.push(queryObject[tileName]);
+        } else {
+            queryObject[tileName].points.push([points[i][1], points[i][0]]);
+            queryObject[tileName].pointIDs.push(i);
+        }
+    }
+    return output;
+}
+
 function loadTiles(queryPoints, maxZoom, minZoom, threshold, loadFunction, callback) {
     if (!queryPoints[0].length) return callback(new Error('Invalid query points'));
     if (!threshold) return callback(new Error('Specify a zoom level threshold'));
@@ -24,34 +50,8 @@ function loadTiles(queryPoints, maxZoom, minZoom, threshold, loadFunction, callb
         });
     }
 
-    function buildQuery(points, zoom) {
-        var queryObject = {}, output = [];
-        for (var i = 0; i < points.length; i++) {
-            var xyz = sm.xyz([points[i][1], points[i][0], points[i][1], points[i][0]], zoom);
-            var tileName = zoom + '/' + xyz.minX + '/' + xyz.minY;
-            if (queryObject[tileName] === undefined) {
-                queryObject[tileName] = {
-                    zxy: {
-                        z: zoom,
-                        x: xyz.minX,
-                        y: xyz.minY
-                    },
-                    points: [
-                        [points[i][1], points[i][0]]
-                    ],
-                    pointIDs: [i]
-                };
-                output.push(queryObject[tileName]);
-            } else {
-                queryObject[tileName].points.push([points[i][1], points[i][0]]);
-                queryObject[tileName].pointIDs.push(i);
-            }
-        }
-        return output;
-    }
-
     var initialTileLoad = buildQuery(queryPoints, maxZoom);
-    var reducuedTiles = changeNumberTilesLoaded(buildQuery, initialTileLoad, queryPoints, maxZoom, minZoom, threshold);
+    var reducuedTiles = changeNumberTilesLoaded(initialTileLoad, queryPoints, maxZoom, minZoom, threshold);
     if(!reducuedTiles) return callback(new Error('Too many tiles have been requested'));
 
     var loadQueue = new async();
@@ -63,14 +63,14 @@ function loadTiles(queryPoints, maxZoom, minZoom, threshold, loadFunction, callb
 
 }
 
-function changeNumberTilesLoaded(buildQuery, tiles, points, currentZoom, minZoom, threshold) {
+function changeNumberTilesLoaded(tiles, points, currentZoom, minZoom, threshold) {
     if(tiles.length > threshold){
         var newZoom = currentZoom - 1;
         if(newZoom >= minZoom){
             var newTiles = buildQuery(points, newZoom);
             if(newTiles.length > threshold){
                 try {
-                    changeNumberTilesLoaded(buildQuery, newTiles, points, newZoom, minZoom, threshold);
+                    changeNumberTilesLoaded(newTiles, points, newZoom, minZoom, threshold);
                 } catch(e) {
                     return e;
                 }
@@ -230,6 +230,7 @@ function convert(queryPoints, pointIDs, fields, interpolate, data) {
 }
 
 module.exports = {
+    buildQuery: buildQuery,
     convert: convert,
     queryTile: queryTile,
     loadTiles: loadTiles,
