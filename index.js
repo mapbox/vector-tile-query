@@ -3,7 +3,7 @@ var sphericalmercator = require('sphericalmercator');
 var sm = new sphericalmercator();
 var async = require('queue-async');
 var _ = require('lodash');
-var filler = require('./scripts/fill-nulls.js');
+var filler = require('./lib/fill-nulls');
 
 function sortBy(sortField) {
     return function sortCallback(a, b) {
