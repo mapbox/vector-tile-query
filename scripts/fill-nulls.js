@@ -1,4 +1,4 @@
-function interpolateResponse(inObj, field) {
+function interpolateNulls(inObj, field) {
 
     function interpolateBetween(fr, to, frID, toID) {
         var idRange = toID - frID;
@@ -80,5 +80,5 @@ function interpolateResponse(inObj, field) {
 }
 
 module.exports = {
-    interpolateObject: interpolateResponse
+    interpolateNulls: interpolateNulls
 };

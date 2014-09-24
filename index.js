@@ -162,7 +162,6 @@ function multiQuery(dataArr,options,callback) {
 
     var fillNulls = options.fill !== undefined ? options.fill : false;
 
-
     function queriesDone(err, queries) {
         if (err) return callback(err);
         var dataOutput = [];
