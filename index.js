@@ -161,7 +161,7 @@ function queryTile(pbuf, tileInfo, queryPoints, pointIDs, options, callback) {
 function multiQuery(dataArr,options,callback) {
 
     var fillNulls = options.fill !== undefined ? options.fill : false;
-
+    console.log('fill: 'fillNulls);
     function queriesDone(err, queries) {
         if (err) return callback(err);
         var dataOutput = [];
