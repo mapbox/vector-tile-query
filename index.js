@@ -161,12 +161,14 @@ function queryTile(pbuf, tileInfo, queryPoints, pointIDs, options, callback) {
 function multiQuery(dataArr,options,callback) {
 
     var fillNulls = options.fill !== undefined ? options.fill : false;
-    console.log('fill: 'fillNulls);
+
     function queriesDone(err, queries) {
         if (err) return callback(err);
+
         var dataOutput = [];
         dataOutput = dataOutput.concat.apply(dataOutput, queries);
         dataOutput.sort(sortBy('id'));
+
         if (fillNulls) {
             for (var f = 0; f < options.fields.length; f++) {
                 filler.interpolateNulls(dataOutput, options.fields[f]);
