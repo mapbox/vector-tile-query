@@ -1,7 +1,7 @@
 {
   "name": "vector-tile-query",
   "description": "Vector tile query module",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "licenses": [
     {
       "type": "BSD"
