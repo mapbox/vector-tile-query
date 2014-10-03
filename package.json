@@ -23,7 +23,7 @@
   },
   "main": "./index",
   "dependencies": {
-    "mapnik": "1.4.16",
+    "mapnik": "3.0.x",
     "queue-async": "1.0.7",
     "sphericalmercator": "~1.0.2",
     "lodash": "~2.4.1"
