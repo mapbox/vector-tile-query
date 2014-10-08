@@ -209,4 +209,16 @@ describe('Test for invalid data', function() {
         });
     });
 
+    it('return nulls from empty hits', function(done) {
+        var queryPoints = [[40.41970,-78.44625],[40.41970,-78.44625]];
+        var pointIDs = [1,2];
+        var hits = {
+            hits: [,]
+        };
+        var validResponse = '[{"id":1,"latlng":{"lat":-78.44625,"lng":40.4197},"ele":null}]';
+        var response = vtileQuery.convert(queryPoints, pointIDs, ['ele'], true, hits);
+        assert.equal(JSON.stringify(response), validResponse);
+        done();
+    });
+
 });

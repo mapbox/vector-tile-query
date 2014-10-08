@@ -208,7 +208,8 @@ function convert(queryPoints, pointIDs, fields, interpolate, data) {
             }
         };
 
-        var hit = data.hits[i];
+        var hit = data.hits[i] || [];
+
         if (hit.length > 1 && hit[hit.length - 1].distance !== 0 && interpolate === true) {
             for (var j = 0; j < fieldsLength; j++) {
                 var field = fields[j];
