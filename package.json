@@ -1,7 +1,7 @@
 {
   "name": "vector-tile-query",
   "description": "Vector tile query module",
-  "version": "0.1.5",
+  "version": "1.0.1",
   "licenses": [
     {
       "type": "BSD"
@@ -23,10 +23,9 @@
   },
   "main": "./index",
   "dependencies": {
-    "mapnik": "1.4.16",
+    "mapnik": "3.0.x",
     "queue-async": "1.0.7",
-    "sphericalmercator": "~1.0.2",
-    "lodash": "~2.4.1"
+    "sphericalmercator": "~1.0.2"
   },
   "devDependencies": {
     "mocha": "1.17.x",

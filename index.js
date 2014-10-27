@@ -50,10 +50,12 @@ function loadTiles(queryPoints, maxZoom, minZoom, threshold, loadFunction, callb
             return callback(null, tileObj);
         });
     }
-
+    var reducer = new Reducer();
     var initialTileLoad = buildQuery(queryPoints, maxZoom);
-    var reducedTiles = changeNumberTilesLoaded(initialTileLoad, queryPoints, maxZoom, minZoom, threshold);
-    if(!reducedTiles) return callback(new Error('Too many tiles have been requested'));
+
+    var reducedTiles = reducer.reduce(initialTileLoad, queryPoints, maxZoom, minZoom, threshold);
+
+    if(reducedTiles.length > threshold) return callback(new Error('Too many tiles have been requested'));
 
     var loadQueue = new async();
     for (var i = 0; i < reducedTiles.length; i++) {
@@ -64,26 +66,39 @@ function loadTiles(queryPoints, maxZoom, minZoom, threshold, loadFunction, callb
 
 }
 
-function changeNumberTilesLoaded(tiles, points, currentZoom, minZoom, threshold) {
-    if(tiles.length > threshold){
-        var newZoom = currentZoom - 1;
-        if(newZoom >= minZoom){
-            var newTiles = buildQuery(points, newZoom);
-            if(newTiles.length > threshold){
+var Reducer = function() {};
+
+Reducer.prototype = {
+    tileReduce: function(points, minZoom, threshold) {
+        if (this.tiles.length > threshold) {
+             this.zoom -= 1;
+             if (this.zoom >= minZoom) {
+                this.tiles = buildQuery(points, this.zoom);
                 try {
-                    changeNumberTilesLoaded(newTiles, points, newZoom, minZoom, threshold);
+                    this.tileReduce(points, minZoom, threshold);
                 } catch(e) {
-                    return e;
+                    return e; 
                 }
-            } else {
-                return newTiles;
-            }
+             } else {
+                return this.tiles;
+             }
         } else {
-            return tiles;
+            return this.tiles;
         }
-    } else {
-        return tiles;
-    }
+    },
+    reduce: function(tiles, points, currentZoom, minZoom, threshold) {
+        this.tiles = tiles;
+        this.zoom = currentZoom;
+        this.tileReduce(points, minZoom, threshold);
+        return this.tiles;
+    },
+    tiles: {},
+    zoom: {}
+};
+
+function changeNumberTilesLoaded(initialTileLoad, queryPoints, maxZoom, minZoom, threshold) {
+    var reducer = new Reducer();
+    return reducer.reduce(initialTileLoad, queryPoints, maxZoom, minZoom, threshold);
 }
 
 function queryTile(pbuf, tileInfo, queryPoints, pointIDs, options, callback) {
@@ -186,7 +201,6 @@ function multiQuery(dataArr,options,callback) {
     queryQueue.awaitAll(queriesDone);
 }
 
-// Convert raw results from vt.queryMany into formatted output.
 function convert(queryPoints, pointIDs, fields, interpolate, data) {
     if (data.features) {
         for (var k = 0; k < data.features.length; k++) {
@@ -205,7 +219,8 @@ function convert(queryPoints, pointIDs, fields, interpolate, data) {
             }
         };
 
-        var hit = data.hits[i];
+        var hit = data.hits[i] || [];
+
         if (hit.length > 1 && hit[hit.length - 1].distance !== 0 && interpolate === true) {
             for (var j = 0; j < fieldsLength; j++) {
                 var field = fields[j];
