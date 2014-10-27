@@ -3,6 +3,7 @@ var sphericalmercator = require('sphericalmercator');
 var sm = new sphericalmercator();
 var async = require('queue-async');
 var _ = require('lodash');
+var filler = require('./lib/fill-nulls');
 
 function sortBy(sortField) {
     return function sortCallback(a, b) {
@@ -51,12 +52,12 @@ function loadTiles(queryPoints, maxZoom, minZoom, threshold, loadFunction, callb
     }
 
     var initialTileLoad = buildQuery(queryPoints, maxZoom);
-    var reducuedTiles = changeNumberTilesLoaded(initialTileLoad, queryPoints, maxZoom, minZoom, threshold);
-    if(!reducuedTiles) return callback(new Error('Too many tiles have been requested'));
+    var reducedTiles = changeNumberTilesLoaded(initialTileLoad, queryPoints, maxZoom, minZoom, threshold);
+    if(!reducedTiles) return callback(new Error('Too many tiles have been requested'));
 
     var loadQueue = new async();
-    for (var i = 0; i < reducuedTiles.length; i++) {
-        loadQueue.defer(loadTileAsync,reducuedTiles[i],loadFunction);
+    for (var i = 0; i < reducedTiles.length; i++) {
+        loadQueue.defer(loadTileAsync,reducedTiles[i],loadFunction);
     }
 
     loadQueue.awaitAll(callback);
@@ -159,11 +160,20 @@ function queryTile(pbuf, tileInfo, queryPoints, pointIDs, options, callback) {
 
 function multiQuery(dataArr,options,callback) {
 
+    var fillNulls = options.fill !== undefined ? options.fill : false;
+
     function queriesDone(err, queries) {
         if (err) return callback(err);
+
         var dataOutput = [];
         dataOutput = dataOutput.concat.apply(dataOutput, queries);
         dataOutput.sort(sortBy('id'));
+
+        if (fillNulls) {
+            for (var f = 0; f < options.fields.length; f++) {
+                filler.interpolateNulls(dataOutput, options.fields[f]);
+            }
+        }
         return callback(null, dataOutput);
     }
 

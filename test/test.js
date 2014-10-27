@@ -7,17 +7,18 @@ var vtileQuery = require('../');
 function readTile(tile,callback) {
     var tilepath = 'test/fixtures/tiles/' + tile.z + '/' + tile.x + '/' + tile.y + '.vector.pbf';
     fs.readFile(tilepath, function(err,data) {
+        if (err && err.code === 'ENOENT') return callback(null,{});
         if (err) return callback(err)
         return callback(null,data);
     });
 }
 
 describe('Load relevant tiles from list of coords', function() {
-    it('should fail if tile does not exist', function(done) {
-        var queryCoords = [[37.934205,-122.747147], [37.934721, -122.747461], [38.93512, -122.747993]];
+    it('should return an empty object if tile does not exist', function(done) {
+        var queryCoords = [[38.934205,-122.747147], [38.934721, -122.747461], [38.93512, -122.747993]];
         var validError = 'ENOENT';
         vtileQuery.loadTiles(queryCoords,14, 10, 100,readTile, function (err,data) {
-            assert.equal(err.code,validError);
+            assert.equal(JSON.stringify(data[0].data),JSON.stringify({}));
             done();
         });
     });
@@ -103,7 +104,7 @@ describe('Tests for matching queries', function() {
         var queryPoints = [[37.934205, -122.747147], [37.934721, -122.747461]];
         var validResponse = '[{"id":0,"latlng":{"lat":37.934205,"lng":-122.747147},"ele":81.3189156103434},{"id":1,"latlng":{"lat":37.934721,"lng":-122.747461},"ele":85.1838043599294}]'
         vtileQuery.loadTiles(queryPoints,14, 10, 100,readTile, function (err,data) {
-            vtileQuery.multiQuery(data, {tolerance:10,layer:'contour',fields:['ele']}, function(err, queryData) {
+            vtileQuery.multiQuery(data, {tolerance:10,layer:'contour',fields:['ele'],fill:true}, function(err, queryData) {
                 assert.equal(JSON.stringify(queryData),validResponse);
                 done();
             });
@@ -114,7 +115,7 @@ describe('Tests for matching queries', function() {
         var queryPoints = [[37.934205, -122.747147], [37.934721, -122.747461]];
         var validResponse = '[{"id":0,"latlng":{"lat":37.934205,"lng":-122.747147},"ele":81.3189156103434,"index":1.8681084389656604},{"id":1,"latlng":{"lat":37.934721,"lng":-122.747461},"ele":85.1838043599294,"index":1.48161956400706}]'
         vtileQuery.loadTiles(queryPoints,14, 10, 100,readTile, function (err,data) {
-            vtileQuery.multiQuery(data, {tolerance:10,layer:'contour',fields:['ele','index']}, function(err, queryData) {
+            vtileQuery.multiQuery(data, {tolerance:10,layer:'contour',fields:['ele','index'],fill:true}, function(err, queryData) {
                 assert.equal(JSON.stringify(queryData),validResponse);
                 done();
             });
@@ -125,7 +126,7 @@ describe('Tests for matching queries', function() {
         var queryPoints = [[37.934205, -122.747147], [37.934721, -122.747461]];
         var validResponse = '[{"id":0,"latlng":{"lat":37.934205,"lng":-122.747147},"ele":80,"index":2},{"id":1,"latlng":{"lat":37.934721,"lng":-122.747461},"ele":90,"index":1}]'
         vtileQuery.loadTiles(queryPoints,14, 10, 100,readTile, function (err,data) {
-            vtileQuery.multiQuery(data, {tolerance:10,layer:'contour',fields:['ele','index'], interpolate: false}, function(err, queryData) {
+            vtileQuery.multiQuery(data, {tolerance:10,layer:'contour',fields:['ele','index'], interpolate: false, fill:true}, function(err, queryData) {
                 assert.equal(JSON.stringify(queryData),validResponse);
                 done();
             });
@@ -136,13 +137,36 @@ describe('Tests for matching queries', function() {
         var queryPoints = [[37.934205, -122.747147], [37.934721, -122.747461]];
         var validResponse = '[{"id":0,"latlng":{"lat":37.934205,"lng":-122.747147},"class":"scrub"},{"id":1,"latlng":{"lat":37.934721,"lng":-122.747461},"class":"wood"}]';
         vtileQuery.loadTiles(queryPoints,14, 10, 100,readTile, function (err,data) {
-            vtileQuery.multiQuery(data, {tolerance:10,layer:'landcover',fields:['class']}, function(err, queryData) {
+            vtileQuery.multiQuery(data, {tolerance:10,layer:'landcover',fields:['class'],fill:true}, function(err, queryData) {
                 assert.equal(JSON.stringify(queryData),validResponse);
                 done();
             });
         });
     });
 
+});
+
+describe('Tests for line smoothing', function() {
+    it('return should match when null filling is true', function(done) {
+        var queryPoints = [[37.934205,-122.747147],[37.946938770643676,-122.73771286010741],[37.93539767187347,-122.74921417236328]];
+        var validResponse = '[{"id":0,"latlng":{"lat":37.934205,"lng":-122.747147},"ele":81.3189156103434},{"id":1,"latlng":{"lat":37.946938770643676,"lng":-122.73771286010741},"ele":86.55751911884053},{"id":2,"latlng":{"lat":37.93539767187347,"lng":-122.74921417236328},"ele":91.79612262733765}]';
+        vtileQuery.loadTiles(queryPoints,14, 10, 100,readTile, function (err,data) {
+            vtileQuery.multiQuery(data, {tolerance:10,layer:'contour',fields:['ele'],fill:true}, function(err, queryData) {
+                assert.equal(JSON.stringify(queryData),validResponse);
+                done();
+            });
+        });
+    });
+    it('return should match when null filling is false', function(done) {
+        var queryPoints = [[37.934205,-122.747147],[37.946938770643676,-122.73771286010741],[37.93539767187347,-122.74921417236328]];
+        var validResponse = '[{"id":0,"latlng":{"lat":37.934205,"lng":-122.747147},"ele":81.3189156103434},{"id":1,"latlng":{"lat":37.946938770643676,"lng":-122.73771286010741},"ele":null},{"id":2,"latlng":{"lat":37.93539767187347,"lng":-122.74921417236328},"ele":91.79612262733765}]';
+        vtileQuery.loadTiles(queryPoints,14, 10, 100,readTile, function (err,data) {
+            vtileQuery.multiQuery(data, {tolerance:10,layer:'contour',fields:['ele'],fill:false}, function(err, queryData) {
+                assert.equal(JSON.stringify(queryData),validResponse);
+                done();
+            });
+        });
+    });
 });
 
 describe('Test for invalid points', function() {
