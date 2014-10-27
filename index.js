@@ -2,6 +2,8 @@ var mapnik = require('mapnik');
 var sphericalmercator = require('sphericalmercator');
 var sm = new sphericalmercator();
 var async = require('queue-async');
+var _ = require('lodash');
+var filler = require('./lib/fill-nulls');
 
 function sortBy(sortField) {
     return function sortCallback(a, b) {
@@ -50,6 +52,7 @@ function loadTiles(queryPoints, maxZoom, minZoom, threshold, loadFunction, callb
     }
     var reducer = new Reducer();
     var initialTileLoad = buildQuery(queryPoints, maxZoom);
+
     var reducedTiles = reducer.reduce(initialTileLoad, queryPoints, maxZoom, minZoom, threshold);
 
     if(reducedTiles.length > threshold) return callback(new Error('Too many tiles have been requested'));
@@ -172,11 +175,20 @@ function queryTile(pbuf, tileInfo, queryPoints, pointIDs, options, callback) {
 
 function multiQuery(dataArr,options,callback) {
 
+    var fillNulls = options.fill !== undefined ? options.fill : false;
+
     function queriesDone(err, queries) {
         if (err) return callback(err);
+
         var dataOutput = [];
         dataOutput = dataOutput.concat.apply(dataOutput, queries);
         dataOutput.sort(sortBy('id'));
+
+        if (fillNulls) {
+            for (var f = 0; f < options.fields.length; f++) {
+                filler.interpolateNulls(dataOutput, options.fields[f]);
+            }
+        }
         return callback(null, dataOutput);
     }
 
@@ -189,7 +201,6 @@ function multiQuery(dataArr,options,callback) {
     queryQueue.awaitAll(queriesDone);
 }
 
-// Convert raw results from vt.queryMany into formatted output.
 function convert(queryPoints, pointIDs, fields, interpolate, data) {
     if (data.features) {
         for (var k = 0; k < data.features.length; k++) {
