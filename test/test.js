@@ -104,7 +104,7 @@ describe('Tests for matching queries', function() {
         var queryPoints = [[37.934205, -122.747147], [37.934721, -122.747461]];
         var validResponse = '[{"id":0,"latlng":{"lat":37.934205,"lng":-122.747147},"ele":81.3189156103434},{"id":1,"latlng":{"lat":37.934721,"lng":-122.747461},"ele":85.1838043599294}]'
         vtileQuery.loadTiles(queryPoints,14, 10, 100,readTile, function (err,data) {
-            vtileQuery.multiQuery(data, {tolerance:10,layer:'contour',fields:['ele'],fill:true}, function(err, queryData) {
+            vtileQuery.multiQuery(data, {tolerance:50,layer:'contour',fields:['ele'],fill:true}, function(err, queryData) {
                 assert.equal(JSON.stringify(queryData),validResponse);
                 done();
             });
@@ -115,7 +115,7 @@ describe('Tests for matching queries', function() {
         var queryPoints = [[37.934205, -122.747147], [37.934721, -122.747461]];
         var validResponse = '[{"id":0,"latlng":{"lat":37.934205,"lng":-122.747147},"ele":81.3189156103434,"index":1.8681084389656604},{"id":1,"latlng":{"lat":37.934721,"lng":-122.747461},"ele":85.1838043599294,"index":1.48161956400706}]'
         vtileQuery.loadTiles(queryPoints,14, 10, 100,readTile, function (err,data) {
-            vtileQuery.multiQuery(data, {tolerance:10,layer:'contour',fields:['ele','index'],fill:true}, function(err, queryData) {
+            vtileQuery.multiQuery(data, {tolerance:50,layer:'contour',fields:['ele','index'],fill:true}, function(err, queryData) {
                 assert.equal(JSON.stringify(queryData),validResponse);
                 done();
             });
@@ -126,7 +126,7 @@ describe('Tests for matching queries', function() {
         var queryPoints = [[37.934205, -122.747147], [37.934721, -122.747461]];
         var validResponse = '[{"id":0,"latlng":{"lat":37.934205,"lng":-122.747147},"ele":80,"index":2},{"id":1,"latlng":{"lat":37.934721,"lng":-122.747461},"ele":90,"index":1}]'
         vtileQuery.loadTiles(queryPoints,14, 10, 100,readTile, function (err,data) {
-            vtileQuery.multiQuery(data, {tolerance:10,layer:'contour',fields:['ele','index'], interpolate: false, fill:true}, function(err, queryData) {
+            vtileQuery.multiQuery(data, {tolerance:50,layer:'contour',fields:['ele','index'], interpolate: false, fill:true}, function(err, queryData) {
                 assert.equal(JSON.stringify(queryData),validResponse);
                 done();
             });
@@ -137,7 +137,7 @@ describe('Tests for matching queries', function() {
         var queryPoints = [[37.934205, -122.747147], [37.934721, -122.747461]];
         var validResponse = '[{"id":0,"latlng":{"lat":37.934205,"lng":-122.747147},"class":"scrub"},{"id":1,"latlng":{"lat":37.934721,"lng":-122.747461},"class":"wood"}]';
         vtileQuery.loadTiles(queryPoints,14, 10, 100,readTile, function (err,data) {
-            vtileQuery.multiQuery(data, {tolerance:10,layer:'landcover',fields:['class'],fill:true}, function(err, queryData) {
+            vtileQuery.multiQuery(data, {tolerance:50,layer:'landcover',fields:['class'],fill:true}, function(err, queryData) {
                 assert.equal(JSON.stringify(queryData),validResponse);
                 done();
             });
@@ -151,7 +151,7 @@ describe('Tests for line smoothing', function() {
         var queryPoints = [[37.934205,-122.747147],[37.946938770643676,-122.73771286010741],[37.93539767187347,-122.74921417236328]];
         var validResponse = '[{"id":0,"latlng":{"lat":37.934205,"lng":-122.747147},"ele":81.3189156103434},{"id":1,"latlng":{"lat":37.946938770643676,"lng":-122.73771286010741},"ele":86.55751911884053},{"id":2,"latlng":{"lat":37.93539767187347,"lng":-122.74921417236328},"ele":91.79612262733765}]';
         vtileQuery.loadTiles(queryPoints,14, 10, 100,readTile, function (err,data) {
-            vtileQuery.multiQuery(data, {tolerance:10,layer:'contour',fields:['ele'],fill:true}, function(err, queryData) {
+            vtileQuery.multiQuery(data, {tolerance:60,layer:'contour',fields:['ele'],fill:true}, function(err, queryData) {
                 assert.equal(JSON.stringify(queryData),validResponse);
                 done();
             });
@@ -161,7 +161,7 @@ describe('Tests for line smoothing', function() {
         var queryPoints = [[37.934205,-122.747147],[37.946938770643676,-122.73771286010741],[37.93539767187347,-122.74921417236328]];
         var validResponse = '[{"id":0,"latlng":{"lat":37.934205,"lng":-122.747147},"ele":81.3189156103434},{"id":1,"latlng":{"lat":37.946938770643676,"lng":-122.73771286010741},"ele":null},{"id":2,"latlng":{"lat":37.93539767187347,"lng":-122.74921417236328},"ele":91.79612262733765}]';
         vtileQuery.loadTiles(queryPoints,14, 10, 100,readTile, function (err,data) {
-            vtileQuery.multiQuery(data, {tolerance:10,layer:'contour',fields:['ele'],fill:false}, function(err, queryData) {
+            vtileQuery.multiQuery(data, {tolerance:60,layer:'contour',fields:['ele'],fill:false}, function(err, queryData) {
                 assert.equal(JSON.stringify(queryData),validResponse);
                 done();
             });
@@ -203,7 +203,7 @@ describe('Test for string queries', function() {
         var queryPoints = [[40.41970,-78.44625]];
         var validResponse = '[{"id":0,"latlng":{"lat":40.4197,"lng":-78.44625},"class":"street"}]';
         vtileQuery.loadTiles(queryPoints,14, 10, 100, readTile, function (err,data) {
-            vtileQuery.multiQuery(data, {tolerance:10,layer:'road',fields:['class']}, function(err, queryData) {
+            vtileQuery.multiQuery(data, {tolerance:50,layer:'road',fields:['class']}, function(err, queryData) {
                 assert.equal(JSON.stringify(queryData),validResponse);
                 done();
             });
