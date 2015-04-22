@@ -144,6 +144,16 @@ describe('Tests for matching queries', function() {
         });
     });
 
+    it('mapbox-terrain-v2 (stackedpolygonpancakes) return should match', function(done) {
+        var queryPoints = [[-22.949513051950472, -43.15575197339058,]];
+        var validResponse = '[{"id":0,"latlng":{"lat":-22.949513051950472,"lng":-43.15575197339058},"ele":300,"index":10}]';
+        vtileQuery.loadTiles(queryPoints,14, 10, 100, readTile, function (err,data) {
+            vtileQuery.multiQuery(data, {tolerance:100, layer:'contour',fields:['ele','index'],fill: true}, function(err, queryData) {
+                assert.equal(JSON.stringify(queryData),validResponse);
+                done();
+            });
+        });
+    });
 });
 
 describe('Tests for line smoothing', function() {
