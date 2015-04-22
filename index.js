@@ -243,6 +243,7 @@ function convert(queryPoints, pointIDs, fields, interpolate, data) {
             }
         } else if (hit[hit.length - 1].distance === 0) {
             for (var j = 0; j < fieldsLength; j++) {
+                hit.sort(sortBy('feature_id'));
                 var field = fields[j];
                 res[field] = data.features[hit[hit.length - 1].feature_id].attr[field];
             }

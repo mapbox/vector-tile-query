@@ -144,6 +144,27 @@ describe('Tests for matching queries', function() {
         });
     });
 
+    it('mapbox-terrain-v2 (stackedpolygonpancakes) return should match - brazil', function(done) {
+        var queryPoints = [[-22.949513051950472, -43.15575197339058]];
+        var validResponse = '[{"id":0,"latlng":{"lat":-22.949513051950472,"lng":-43.15575197339058},"ele":300,"index":10}]';
+        vtileQuery.loadTiles(queryPoints,14, 10, 100, readTile, function (err,data) {
+            vtileQuery.multiQuery(data, {tolerance:100, layer:'contour',fields:['ele','index'],fill: true}, function(err, queryData) {
+                assert.equal(JSON.stringify(queryData),validResponse);
+                done();
+            });
+        });
+    });
+
+    it('mapbox-terrain-v2 (stackedpolygonpancakes) return should match - mt everest', function(done) {
+        var queryPoints = [[27.988916119554304, 86.9253945350647]];
+        var validResponse = '[{"id":0,"latlng":{"lat":27.988916119554304,"lng":86.9253945350647},"ele":8740,"index":2}]';
+        vtileQuery.loadTiles(queryPoints,16, 10, 100, readTile, function (err,data) {
+            vtileQuery.multiQuery(data, {tolerance:100, layer:'contour',fields:['ele','index'],fill: true}, function(err, queryData) {
+                assert.equal(JSON.stringify(queryData),validResponse);
+                done();
+            });
+        });
+    });
 });
 
 describe('Tests for line smoothing', function() {
