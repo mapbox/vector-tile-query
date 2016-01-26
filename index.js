@@ -149,10 +149,7 @@ function queryTile(pbuf, tileInfo, queryPoints, pointIDs, options, callback) {
     if (pbuf && Buffer.isBuffer(pbuf)) {
         var vt = new mapnik.VectorTile(tileInfo.z,tileInfo.x,tileInfo.y);
         vt.setData(pbuf);
-        vt.parse(function(err) {
-            if (err) return callback(err);
-            query(vt, queryPoints,layer,fields, tolerance, callback);
-        });
+        query(vt, queryPoints,layer,fields, tolerance, callback);
     } else {
         outputData = [];
         for (var i = 0; i < queryPoints.length; i++) {
