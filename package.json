@@ -23,7 +23,7 @@
   },
   "main": "./index",
   "dependencies": {
-    "mapnik" : "https://github.com/mapnik/node-mapnik/tarball/master",
+    "mapnik" : "~3.5.0",
     "queue-async": "1.0.7",
     "sphericalmercator": "~1.0.2"
   },
