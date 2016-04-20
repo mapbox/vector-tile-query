@@ -102,7 +102,7 @@ describe('Make sure layers and fields are specified', function() {
 describe('Tests for matching queries', function() {
     it('elevation (polyline) return should match', function(done) {
         var queryPoints = [[37.934205, -122.747147], [37.934721, -122.747461]];
-        var validResponse = '[{"id":0,"latlng":{"lat":37.934205,"lng":-122.747147},"ele":81.3189156103434},{"id":1,"latlng":{"lat":37.934721,"lng":-122.747461},"ele":85.1838043599294}]'
+        var validResponse = '[{"id":0,"latlng":{"lat":37.934205,"lng":-122.747147},"ele":81.31891561556313},{"id":1,"latlng":{"lat":37.934721,"lng":-122.747461},"ele":85.1838043627994}]';
         vtileQuery.loadTiles(queryPoints,14, 10, 100,readTile, function (err,data) {
             vtileQuery.multiQuery(data, {tolerance:50,layer:'contour',fields:['ele'],fill:true}, function(err, queryData) {
                 assert.equal(JSON.stringify(queryData),validResponse);
@@ -113,7 +113,7 @@ describe('Tests for matching queries', function() {
 
     it('multiple field query should match', function(done) {
         var queryPoints = [[37.934205, -122.747147], [37.934721, -122.747461]];
-        var validResponse = '[{"id":0,"latlng":{"lat":37.934205,"lng":-122.747147},"ele":81.3189156103434,"index":1.8681084389656604},{"id":1,"latlng":{"lat":37.934721,"lng":-122.747461},"ele":85.1838043599294,"index":1.48161956400706}]'
+        var validResponse = '[{"id":0,"latlng":{"lat":37.934205,"lng":-122.747147},"ele":81.31891561556313,"index":1.8681084384436866},{"id":1,"latlng":{"lat":37.934721,"lng":-122.747461},"ele":85.1838043627994,"index":1.481619563720059}]';
         vtileQuery.loadTiles(queryPoints,14, 10, 100,readTile, function (err,data) {
             vtileQuery.multiQuery(data, {tolerance:50,layer:'contour',fields:['ele','index'],fill:true}, function(err, queryData) {
                 assert.equal(JSON.stringify(queryData),validResponse);
@@ -170,7 +170,7 @@ describe('Tests for matching queries', function() {
 describe('Tests for line smoothing', function() {
     it('return should match when null filling is true', function(done) {
         var queryPoints = [[37.934205,-122.747147],[37.946938770643676,-122.73771286010741],[37.93539767187347,-122.74921417236328]];
-        var validResponse = '[{"id":0,"latlng":{"lat":37.934205,"lng":-122.747147},"ele":81.3189156103434},{"id":1,"latlng":{"lat":37.946938770643676,"lng":-122.73771286010741},"ele":86.55751911884053},{"id":2,"latlng":{"lat":37.93539767187347,"lng":-122.74921417236328},"ele":91.79612262733765}]';
+        var validResponse = '[{"id":0,"latlng":{"lat":37.934205,"lng":-122.747147},"ele":81.31891561556313},{"id":1,"latlng":{"lat":37.946938770643676,"lng":-122.73771286010741},"ele":86.55751912347031},{"id":2,"latlng":{"lat":37.93539767187347,"lng":-122.74921417236328},"ele":91.7961226313775}]';
         vtileQuery.loadTiles(queryPoints,14, 10, 100,readTile, function (err,data) {
             vtileQuery.multiQuery(data, {tolerance:60,layer:'contour',fields:['ele'],fill:true}, function(err, queryData) {
                 assert.equal(JSON.stringify(queryData),validResponse);
@@ -180,7 +180,7 @@ describe('Tests for line smoothing', function() {
     });
     it('return should match when null filling is false', function(done) {
         var queryPoints = [[37.934205,-122.747147],[37.946938770643676,-122.73771286010741],[37.93539767187347,-122.74921417236328]];
-        var validResponse = '[{"id":0,"latlng":{"lat":37.934205,"lng":-122.747147},"ele":81.3189156103434},{"id":1,"latlng":{"lat":37.946938770643676,"lng":-122.73771286010741},"ele":null},{"id":2,"latlng":{"lat":37.93539767187347,"lng":-122.74921417236328},"ele":91.79612262733765}]';
+        var validResponse = '[{"id":0,"latlng":{"lat":37.934205,"lng":-122.747147},"ele":81.31891561556313},{"id":1,"latlng":{"lat":37.946938770643676,"lng":-122.73771286010741},"ele":null},{"id":2,"latlng":{"lat":37.93539767187347,"lng":-122.74921417236328},"ele":91.7961226313775}]';
         vtileQuery.loadTiles(queryPoints,14, 10, 100,readTile, function (err,data) {
             vtileQuery.multiQuery(data, {tolerance:60,layer:'contour',fields:['ele'],fill:false}, function(err, queryData) {
                 assert.equal(JSON.stringify(queryData),validResponse);
