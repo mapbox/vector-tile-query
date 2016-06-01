@@ -15,7 +15,7 @@ function readTile(tile,callback) {
 
 describe('test v1 vs v2', function() {
     
-    ['test/fixtures/tiles/12/725/1453-mapright2.vector.pbf', // original tileset
+    ['test/fixtures/tiles/12/725/1453-original.vector.pbf',  // original tileset
      'test/fixtures/tiles/12/725/1453-mapsamv1.vector.pbf',  // uploaded with old unpacker manual
      'test/fixtures/tiles/12/725/1453-mapsamv2.vector.pbf'   // current mapbox studio upload
     ].forEach(function(fixture) {
