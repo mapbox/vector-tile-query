@@ -9,7 +9,7 @@ function readTile(tile,callback) {
     fs.readFile(tilepath, function(err,data) {
         if (err && err.code === 'ENOENT') return callback(null,{});
         if (err) return callback(err)
-        return callback(null,data);
+        return callback(null, data);
     });
 }
 

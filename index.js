@@ -102,6 +102,7 @@ function changeNumberTilesLoaded(initialTileLoad, queryPoints, maxZoom, minZoom,
 
 function queryTile(pbuf, tileInfo, queryPoints, pointIDs, options, callback) {
 
+
     function createEmptyResponse(respLength, callback) {
             var data = {
                 hits: []
@@ -113,10 +114,15 @@ function queryTile(pbuf, tileInfo, queryPoints, pointIDs, options, callback) {
     }
 
     function query(vt, queryPoints, layer, fields, tolerance) {
+        console.log('Layer names: ' + vt.names());
         if (vt.names().indexOf(layer) === -1) {
+            // console.log('no matching layers');
             createEmptyResponse(queryPoints.length,queryFinalize);
         } else {
-            vt.queryMany(queryPoints, { layer: layer, tolerance: tolerance }, queryFinalize);
+            vt.queryMany(queryPoints, { layer: layer, tolerance: tolerance }, function(err, results) {
+                if (err) throw err;
+                queryFinalize(null, results);
+            });
         }
     }
 
@@ -148,6 +154,7 @@ function queryTile(pbuf, tileInfo, queryPoints, pointIDs, options, callback) {
 
     if (pbuf && Buffer.isBuffer(pbuf)) {
         var vt = new mapnik.VectorTile(tileInfo.z,tileInfo.x,tileInfo.y);
+        // console.log(mapnik.VectorTile.info(pbuf));
         vt.setData(pbuf, function(err) {
             if (err) throw err;
             query(vt, queryPoints, layer, fields, tolerance, callback);
