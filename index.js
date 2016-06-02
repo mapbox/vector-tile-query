@@ -114,7 +114,7 @@ function queryTile(pbuf, tileInfo, queryPoints, pointIDs, options, callback) {
     }
 
     function query(vt, queryPoints, layer, fields, tolerance) {
-        console.log('Layer names: ' + vt.names());
+        //console.log('Layer names: ' + vt.names());
         if (vt.names().indexOf(layer) === -1) {
             // console.log('no matching layers');
             createEmptyResponse(queryPoints.length,queryFinalize);
@@ -151,7 +151,6 @@ function queryTile(pbuf, tileInfo, queryPoints, pointIDs, options, callback) {
     if (fields && fields.length === 0) {
         callback(new Error('Field array empty'));
     }
-
     if (pbuf && Buffer.isBuffer(pbuf)) {
         var vt = new mapnik.VectorTile(tileInfo.z,tileInfo.x,tileInfo.y);
         // console.log(mapnik.VectorTile.info(pbuf));
