@@ -23,9 +23,9 @@
   },
   "main": "./index",
   "dependencies": {
-    "mapnik": "~3.5.0",
+    "mapnik": "~3.6.0",
     "queue-async": "1.0.7",
-    "sphericalmercator": "~1.0.2"
+    "@mapbox/sphericalmercator": "~1.0.2"
   },
   "devDependencies": {
     "mocha": "1.17.x",

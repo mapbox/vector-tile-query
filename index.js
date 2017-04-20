@@ -1,5 +1,5 @@
 var mapnik = require('mapnik');
-var sphericalmercator = require('sphericalmercator');
+var sphericalmercator = require('@mapbox/sphericalmercator');
 var sm = new sphericalmercator();
 var async = require('queue-async');
 var filler = require('./lib/fill-nulls');

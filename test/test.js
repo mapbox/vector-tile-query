@@ -1,6 +1,6 @@
 var assert = require("assert");
 var fs = require('fs');
-var sphericalmercator = require('sphericalmercator');
+var sphericalmercator = require('@mapbox/sphericalmercator');
 var sm = new sphericalmercator();
 var vtileQuery = require('../');
 
