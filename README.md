@@ -1,5 +1,5 @@
 [![Build Status](https://travis-ci.org/mapbox/vector-tile-query.svg?branch=master)](https://travis-ci.org/mapbox/vector-tile-query)
-vector-tile-query 1.2.0
+vector-tile-query
 =======================
 
 vector-tile-query allows you to query [Mapbox Vector Tiles](https://github.com/mapbox/vector-tile-spec) and return data values from these tiles. This module consists of one main function, and two utility / helper functions.
