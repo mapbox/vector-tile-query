@@ -1,7 +1,7 @@
 {
   "name": "@mapbox/vector-tile-query",
   "description": "Vector tile query module",
-  "version": "1.5.0",
+  "version": "2.0.0",
   "licenses": [
     {
       "type": "BSD"
@@ -23,7 +23,7 @@
   },
   "main": "./index",
   "dependencies": {
-    "mapnik": "~3.6.0",
+    "mapnik": "~3.7.0",
     "queue-async": "1.0.7",
     "@mapbox/sphericalmercator": "~1.0.2"
   },
