@@ -23,7 +23,7 @@
   },
   "main": "./index",
   "dependencies": {
-    "mapnik": "~3.7.0",
+    "mapnik": "~4.0.1",
     "queue-async": "1.0.7",
     "@mapbox/sphericalmercator": "~1.0.2"
   },
