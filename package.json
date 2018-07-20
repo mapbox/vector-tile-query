@@ -1,7 +1,7 @@
 {
   "name": "@mapbox/vector-tile-query",
   "description": "Vector tile query module",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "licenses": [
     {
       "type": "BSD"
@@ -23,13 +23,13 @@
   },
   "main": "./index",
   "dependencies": {
+    "@mapbox/sphericalmercator": "~1.0.2",
     "mapnik": "~4.0.1",
-    "queue-async": "1.0.7",
-    "@mapbox/sphericalmercator": "~1.0.2"
+    "queue-async": "1.0.7"
   },
   "devDependencies": {
-    "mocha": "1.17.x",
-    "benchmark": "~1.0.0"
+    "benchmark": "~1.0.0",
+    "mocha": "1.17.x"
   },
   "scripts": {
     "test": "mocha"
