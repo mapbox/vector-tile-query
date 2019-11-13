@@ -1,7 +1,7 @@
 {
   "name": "@mapbox/vector-tile-query",
   "description": "Vector tile query module",
-  "version": "2.2.0",
+  "version": "2.2.1",
   "licenses": [
     {
       "type": "BSD"
